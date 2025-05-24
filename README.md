@@ -1,6 +1,6 @@
 # d.o. vscode-lm Explorer
 
-This extension lists all available language models in your VS Code environment and displays all details about each model, as well as all parameters for the send message API.
+This extension lists all available vs code LM API chat models in your VS Code environment and displays all details about each model, as well as all parameters for the send message API.
 
 ## Features
 - View all available vs code lm api chat models (name, id, vendor, family, version, max input tokens)
@@ -24,7 +24,8 @@ This extension lists all available language models in your VS Code environment a
 
 ## Requirements
 - VS Code 1.100.0 or newer
-- Language Model API support in your VS Code environment
+- Language Model API support in your VS Code environment. 
+Required: GitHub Copilot Chat with enabled models
 
 ## Release Notes
 ### 0.0.1
