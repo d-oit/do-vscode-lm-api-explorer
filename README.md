@@ -1,21 +1,10 @@
 # d.o.vscode-lm Explorer
 
-This extension lists all available vs code LM API chat models in your VS Code environment and displays all details about each model, as well as all parameters for the send message API.
+This extension lists all available vs code LM API chat models in your VS Code environment and displays all details about each model.
 
 ## Features
-- View all available vs code lm api chat models (name, id, vendor, family, version, max input tokens)
-- See all details about the parameters for sending a message to a model, formatted as:
-
-```
-{
-    "model": "claude-sonnet-4",
-    "temperature": 0.1,
-    "top_p": 1,
-    "max_tokens": 16000,
-    "n": 1,
-    "stream": true
-}
-```
+- View all available vs code lm api chat models (name, id, vendor, family, version, max input tokens 
+- Test each model with a "Hello" message.
 
 ## Usage
 - Open the Command Palette (`Ctrl+Shift+P`)
