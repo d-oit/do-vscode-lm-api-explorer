@@ -9,7 +9,7 @@ This extension lists all available vs code LM API chat models in your VS Code en
 ## Usage
 - Open the Command Palette (`Ctrl+Shift+P`)
 - Run `Show all vscode-lm chat models`
-- A webview will appear with all model details and send parameters
+- A webview will appear with all model details and send result.
 
 ## Requirements
 - VS Code 1.100.0 or newer
