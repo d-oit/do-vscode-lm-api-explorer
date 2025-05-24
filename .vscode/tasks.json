@@ -5,7 +5,7 @@
 	"tasks": [
         {
             "type": "shell",
-            "label": "Build LM Model Explorer",
+            "label": "Build d.o. vscode-lm Explorer",
             "command": "npm run compile",
             "group": "build",
             "problemMatcher": [

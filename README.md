@@ -1,9 +1,9 @@
-# LM Model Explorer
+# d.o. vscode-lm Explorer
 
 This extension lists all available language models in your VS Code environment and displays all details about each model, as well as all parameters for the send message API.
 
 ## Features
-- View all available language models (name, id, vendor, family, version, max input tokens)
+- View all available vs code lm api chat models (name, id, vendor, family, version, max input tokens)
 - See all details about the parameters for sending a message to a model, formatted as:
 
 ```
@@ -19,7 +19,7 @@ This extension lists all available language models in your VS Code environment a
 
 ## Usage
 - Open the Command Palette (`Ctrl+Shift+P`)
-- Run `Show all vscode-lm api models`
+- Run `Show all vscode-lm chat models`
 - A webview will appear with all model details and send parameters
 
 ## Requirements

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vscode-test/main/schemas/test-config.schema.json",
+  "label": "Extension Tests",
+  "tests": [
+    {
+      "label": "Unit Tests",
+      "files": "out/test/extension.test.js",
+      "workspaceFolder": "./test-workspace",
+      "mocha": {
+        "timeout": 10000,
+        "reporter": "spec"
+      }
+    },
+    {
+      "label": "Integration Tests",
+      "files": "out/test/integration.test.js",
+      "workspaceFolder": "./test-workspace",
+      "mocha": {
+        "timeout": 30000,
+        "reporter": "spec"
+      }
+    },
+    {
+      "label": "All Tests",
+      "files": "out/test/**/*.test.js",
+      "workspaceFolder": "./test-workspace",
+      "mocha": {
+        "timeout": 30000,
+        "reporter": "spec"
+      }
+    }
+  ]
+}

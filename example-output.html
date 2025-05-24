@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Model Explorer - Example Output</title>
+    <style>
+        body { font-family: sans-serif; margin: 1.5em; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 2em; }
+        th, td { border: 1px solid #ccc; padding: 0.5em; }
+        th { background: #f4f4f4; }
+        pre { background: #f9f9f9; padding: 0.5em; border-radius: 4px; }
+        .model-error { color: #fff; background: #d32f2f; padding: 0.5em; border-radius: 4px; margin: 0.5em 0; }
+        .model-error strong { font-weight: bold; }
+        h2.model-error { background: #d32f2f; color: #fff; padding: 0.75em; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <h1>Available Models</h1>
+    
+    <!-- Example of a supported model -->
+    <h2>✅ GitHub Copilot Chat <small>(github-copilot-chat)</small></h2>
+    <table>
+        <tr><th>Property</th><th>Value</th></tr>
+        <tr><td>Vendor</td><td>copilot</td></tr>
+        <tr><td>Family</td><td>gpt-4</td></tr>
+        <tr><td>Version</td><td>1.0</td></tr>
+        <tr><td>Max Input Tokens</td><td>8192</td></tr>
+    </table>
+
+    <!-- Example of an unsupported model -->
+    <h2 class="model-error">❌ Claude 3.7 Sonnet Thought <small>(claude-3.7-sonnet-thought)</small> - Not Supported</h2>
+    <p class="model-error"><strong>⚠️ This model is not supported for chat requests</strong></p>
+    <table>
+        <tr><th>Property</th><th>Value</th></tr>
+        <tr><td>Vendor</td><td>anthropic</td></tr>
+        <tr><td>Family</td><td>claude</td></tr>
+        <tr><td>Version</td><td>3.7</td></tr>
+        <tr><td>Max Input Tokens</td><td>200000</td></tr>
+        <tr><td colspan='2'><b>Error Details:</b><br>Message: Model is not supported for this request.<br>Code: model_not_supported<br>Cause: invalid_request_error</td></tr>
+    </table>
+
+    <h1>Summary of Changes</h1>
+    <ul>
+        <li>✅ <strong>Added visual icons:</strong> ✅ for supported models, ❌ for unsupported models</li>
+        <li>🔴 <strong>Enhanced error styling:</strong> Red background for unsupported model headers</li>
+        <li>⚠️ <strong>Clear warning message:</strong> Prominent warning below unsupported model headers</li>
+        <li>🎨 <strong>Better visual hierarchy:</strong> Improved CSS for error states</li>
+        <li>📝 <strong>Specific error detection:</strong> Checks for "model_not_supported" and "Model is not supported" messages</li>
+    </ul>
+</body>
+</html>
