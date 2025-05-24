@@ -1,4 +1,4 @@
-# d.o. vscode-lm Explorer
+# d.o.vscode-lm Explorer
 
 This extension lists all available vs code LM API chat models in your VS Code environment and displays all details about each model, as well as all parameters for the send message API.
 
