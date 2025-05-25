@@ -4,8 +4,9 @@
   "publisher": "d.o.it",
   "description": "Comprehensive VS Code extension that explores and tests Language Model API models with modern accordion UI, complete API documentation, cancellation support, and modular architecture.",
   "version": "0.2.0",
+  "icon": "images/icon.png",
   "engines": {
-    "vscode": "^1.100.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Other",

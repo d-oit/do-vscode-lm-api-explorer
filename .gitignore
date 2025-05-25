@@ -1,6 +1,7 @@
 out
 dist
 node_modules
+internal/
 .vscode-test/
 *.vsix
 .github/copilot-instructions.md
