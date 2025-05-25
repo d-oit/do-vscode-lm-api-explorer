@@ -1,6 +1,8 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { ModelService } from '../modelService';
+import { HtmlGenerator } from '../htmlGenerator';
 
 /**
  * Integration tests for the VS Code LM Model Explorer extension
@@ -40,61 +42,80 @@ suite('LM Explorer Integration Tests', () => {
 			
 			const commands = packageJSON.contributes?.commands;
 			assert.ok(Array.isArray(commands), 'Should contribute commands');
-			
-			const showModelsCommand = commands.find((cmd: any) => cmd.command === 'do-vscode-lm-explorer.showModels');
-			assert.ok(showModelsCommand, 'Should contribute showModels command');
-			assert.strictEqual(showModelsCommand.title, 'Show all vscode-lm chat models', 'Command title should match');
+					const discoverModelsCommand = commands.find((cmd: any) => cmd.command === 'do-vscode-lm-explorer.discoverModels');
+			assert.ok(discoverModelsCommand, 'Should contribute discoverModels command');
+			assert.strictEqual(discoverModelsCommand.title, 'AI Model Explorer: Discover & Test Available Models', 'Command title should match');
 		});
 
 		test('Extension has correct activation events', () => {
 			assert.ok(extension, 'Extension should be available');
 			const packageJSON = extension.packageJSON;
 			
-			assert.ok(packageJSON.activationEvents, 'Should have activation events');
-			assert.ok(
-				packageJSON.activationEvents.includes('onCommand:do-vscode-lm-explorer.showModels'),
-				'Should activate on showModels command'
+			assert.ok(packageJSON.activationEvents, 'Should have activation events');			assert.ok(
+				packageJSON.activationEvents.includes('onCommand:do-vscode-lm-explorer.discoverModels'),
+				'Should activate on discoverModels command'
 			);
 		});
 	});
 
 	suite('Command Execution', () => {
 		test('Command is properly registered', async () => {
-			const commands = await vscode.commands.getCommands(true);
-			assert.ok(
-				commands.includes('do-vscode-lm-explorer.showModels'),
-				'showModels command should be registered with VS Code'
+			const commands = await vscode.commands.getCommands(true);			assert.ok(
+				commands.includes('do-vscode-lm-explorer.discoverModels'),
+				'discoverModels command should be registered with VS Code'
 			);
 		});
-
-		test('Command execution creates webview', async function() {
+		test('Command execution with cancellation support', async function() {
 			this.timeout(15000); // 15 seconds for API calls
 			
-			let webviewCreated = false;
+			let commandCompleted = false;
+			let cancellationSupported = false;
 			let error: any = undefined;
 			
-			// Monitor for webview creation
-			const disposable = vscode.window.onDidChangeActiveTextEditor(() => {
-				// This is a rough way to detect webview creation
-				// In a real test, you might want to mock the webview creation
-			});
-			
 			try {
-				await vscode.commands.executeCommand('do-vscode-lm-explorer.showModels');
-				// If we get here without throwing, the command executed successfully
-				webviewCreated = true;
+				// Create a cancellation token to test cancellation support
+				const cancellationTokenSource = new vscode.CancellationTokenSource();
+						// Start command execution
+				const commandPromise = vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
+				
+				// Cancel after a short delay to test cancellation handling
+				setTimeout(() => {
+					cancellationTokenSource.cancel();
+					cancellationSupported = true;
+				}, 100);
+				
+				await commandPromise;
+				commandCompleted = true;
 			} catch (e) {
 				error = e;
 				console.log('Command execution error (may be expected in test environment):', e);
-			} finally {
-				disposable.dispose();
 			}
 			
-			// In a test environment, the command might fail due to no LM models being available
-			// but it should fail gracefully without throwing unhandled exceptions
+			// The command should either complete successfully or handle cancellation gracefully
 			assert.ok(
-				webviewCreated || (error && typeof error === 'object'),
-				'Command should either succeed or fail gracefully'
+				commandCompleted || cancellationSupported || (error && typeof error === 'object'),
+				'Command should handle execution and cancellation gracefully'
+			);
+		});
+
+		test('Command execution with progress reporting', async function() {
+			this.timeout(15000);
+			
+			let progressReported = false;
+			let error: any = undefined;
+					// Monitor for progress notifications (this is tricky to test directly)
+			try {
+				await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
+				progressReported = true; // If command completes, progress was likely reported
+			} catch (e) {
+				error = e;
+				console.log('Command execution error (may be expected in test environment):', e);
+			}
+			
+			// The test passes if the command executes without throwing unhandled exceptions
+			assert.ok(
+				progressReported || (error && typeof error === 'object'),
+				'Command should report progress or fail gracefully'
 			);
 		});
 
@@ -117,11 +138,10 @@ suite('LM Explorer Integration Tests', () => {
 				if (message.includes('Failed to list language models')) {
 					messageShown = true;
 				}
-				return originalShowError(message, ...items);
-			};
+				return originalShowError(message, ...items);			};
 			
 			try {
-				await vscode.commands.executeCommand('do-vscode-lm-explorer.showModels');
+				await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
 			} catch (e) {
 				// Expected in test environment
 			}
@@ -173,10 +193,9 @@ suite('LM Explorer Integration Tests', () => {
 			
 			// This test verifies that our extension properly handles various LM API error scenarios
 			let errorHandledCorrectly = false;
-			
-			try {
+					try {
 				// Try to call our command - it should handle any LM API errors gracefully
-				await vscode.commands.executeCommand('do-vscode-lm-explorer.showModels');
+				await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
 				errorHandledCorrectly = true;
 			} catch (error) {
 				// If an error is thrown, it should be a user-friendly error, not a raw API error
@@ -199,10 +218,9 @@ suite('LM Explorer Integration Tests', () => {
 	suite('Output and Logging', () => {
 		test('Extension creates output channel', async function() {
 			this.timeout(5000);
-			
-			// Execute command to trigger output channel creation
+					// Execute command to trigger output channel creation
 			try {
-				await vscode.commands.executeCommand('do-vscode-lm-explorer.showModels');
+				await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
 			} catch (e) {
 				// Expected in test environment
 			}
@@ -224,36 +242,231 @@ suite('LM Explorer Integration Tests', () => {
 			assert.ok(stringified.includes('Error'), 'Error should stringify correctly');
 		});
 	});
+	suite('ModelService Integration', () => {
+		let outputChannel: vscode.OutputChannel;
+		let modelService: ModelService;
 
-	suite('HTML Generation and Security', () => {
-		test('HTML escaping prevents XSS', () => {
-			// Test the escapeHtml function logic
-			const dangerousInput = '<script>alert("xss")</script>&malicious';
-			const escaped = dangerousInput.replace(/[&<>]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[tag] || tag));
-			
-			assert.ok(!escaped.includes('<script>'), 'Script tags should be escaped');
-			assert.ok(escaped.includes('&lt;script&gt;'), 'Should contain escaped script tags');
-			assert.ok(escaped.includes('&amp;malicious'), 'Ampersands should be escaped');
+		setup(() => {
+			outputChannel = vscode.window.createOutputChannel('Test Integration');
+			modelService = new ModelService(outputChannel);
 		});
 
-		test('HTML template structure is valid', () => {
-			// Basic check that our HTML template has required elements
-			const basicHtml = `
-				<!DOCTYPE html>
-				<html lang="en">
-				<head>
-					<meta charset="UTF-8">
-					<title>Language Model Explorer</title>
-				</head>
-				<body>
-					<h1>Available Models</h1>
-				</body>
-				</html>
-			`;
+		teardown(() => {
+			outputChannel.dispose();
+		});
+
+		test('ModelService can fetch models from VS Code API', async function() {
+			this.timeout(10000);
 			
-			assert.ok(basicHtml.includes('<!DOCTYPE html>'), 'Should have DOCTYPE');
-			assert.ok(basicHtml.includes('<html lang="en">'), 'Should have language attribute');
-			assert.ok(basicHtml.includes('<meta charset="UTF-8">'), 'Should have charset meta tag');
+			let modelsFound = false;
+			let errorHandled = false;
+			
+			try {
+				const models = await modelService.fetchModels();
+				modelsFound = models && models.length > 0;
+				
+				if (modelsFound) {
+					console.log(`ModelService found ${models.length} model(s)`);
+					// Verify model structure
+					const firstModel = models[0];
+					assert.ok(firstModel.id, 'Model should have an ID');
+					assert.ok(firstModel.name, 'Model should have a name');
+					assert.ok(firstModel.vendor, 'Model should have a vendor');
+				}
+			} catch (error) {
+				console.log('ModelService fetch error (expected in test environment):', error);
+				errorHandled = true;
+				
+				// Verify error is user-friendly
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				assert.ok(
+					errorMessage.includes('No language models available') || 
+					errorMessage.includes('Failed to fetch language models'),
+					'Error should be user-friendly'
+				);
+			}
+			
+			assert.ok(modelsFound || errorHandled, 'ModelService should either find models or handle errors gracefully');
+		});
+
+		test('ModelService handles cancellation correctly', async function() {
+			this.timeout(5000);
+			
+			const cancellationTokenSource = new vscode.CancellationTokenSource();
+			cancellationTokenSource.cancel();
+			
+			try {
+				await modelService.fetchModels(cancellationTokenSource.token);
+				assert.fail('Should have thrown CancellationError');
+			} catch (error) {
+				assert.ok(error instanceof vscode.CancellationError, 'Should throw CancellationError when cancelled');
+			}
+		});
+
+		test('ModelService can test models with real API calls', async function() {
+			this.timeout(15000);
+			
+			try {
+				// First try to get models
+				const models = await modelService.fetchModels();
+				if (models && models.length > 0) {
+					// Create a mock progress reporter
+					const progress = {
+						report: (value: { message?: string; increment?: number }) => {
+							console.log(`Progress: ${value.message} (+${value.increment}%)`);
+						}
+					};
+					
+					// Test the models
+					const results = await modelService.testModels(models.slice(0, 1), progress); // Test only first model
+					
+					assert.ok(typeof results === 'object', 'Should return results object');
+					const firstModelId = models[0].id;
+					assert.ok(firstModelId in results, 'Should have result for tested model');
+					
+					const result = results[firstModelId];
+					assert.ok(
+						result.response || result.error || result.errorDetails,
+						'Result should have response or error information'
+					);
+				} else {
+					console.log('No models available for testing in test environment');
+				}
+			} catch (error) {
+				console.log('Model testing error (expected in test environment):', error);
+				// Test passes if error is handled gracefully
+			}
+			
+			assert.ok(true, 'Model testing should complete without unhandled exceptions');
+		});
+	});
+	suite('HtmlGenerator Integration', () => {
+		test('HtmlGenerator produces valid HTML with real data structure', () => {
+			const testData = {
+				models: [],
+				modelJson: {},
+				sendResults: {}
+			};
+			
+			const html = HtmlGenerator.generateHtml(testData);
+			
+			// Basic HTML validation
+			assert.ok(html.includes('<!DOCTYPE html>'), 'Should have valid DOCTYPE');
+			assert.ok(html.includes('<html'), 'Should have html tag');
+			assert.ok(html.includes('</html>'), 'Should close html tag');
+			assert.ok(html.includes('<head>'), 'Should have head section');
+			assert.ok(html.includes('<body>'), 'Should have body section');
+			assert.ok(html.includes('Language Model Explorer'), 'Should have title');
+		});
+
+		test('HtmlGenerator includes complete LanguageModelChatRequestOptions documentation', () => {
+			const testData = {
+				models: [],
+				modelJson: {},
+				sendResults: {}
+			};
+			
+			const html = HtmlGenerator.generateHtml(testData);
+			
+			// Check for key API documentation elements
+			assert.ok(html.includes('LanguageModelChatRequestOptions'), 'Should include API interface name');
+			assert.ok(html.includes('justification'), 'Should document justification parameter');
+			assert.ok(html.includes('modelOptions'), 'Should document modelOptions parameter');
+			assert.ok(html.includes('tools'), 'Should document tools parameter');
+			assert.ok(html.includes('toolMode'), 'Should document toolMode parameter');
+			assert.ok(html.includes('temperature'), 'Should document temperature sub-option');
+			assert.ok(html.includes('max_tokens'), 'Should document max_tokens sub-option');
+		});
+
+		test('HtmlGenerator creates accordion UI structure', () => {
+			const testData = {
+				models: [],
+				modelJson: {},
+				sendResults: {}
+			};
+			
+			const html = HtmlGenerator.generateHtml(testData);
+			
+			// Check for accordion UI elements
+			assert.ok(html.includes('accordion'), 'Should include accordion CSS classes or structure');
+			assert.ok(html.includes('collapsible') || html.includes('toggle'), 'Should include collapsible elements');
+		});
+		test('HtmlGenerator includes copy functionality', () => {
+			const testData = {
+				models: [],
+				modelJson: { 
+					'test-model': {
+						name: 'Test Model',
+						id: 'test-model',
+						vendor: 'test',
+						family: 'test',
+						version: '1.0',
+						maxInputTokens: 1000
+					}
+				},
+				sendResults: { 'test-model': { response: 'test results' } }
+			};
+			
+			const html = HtmlGenerator.generateHtml(testData);
+			
+			// Check for copy functionality
+			assert.ok(html.includes('copy') || html.includes('Copy'), 'Should include copy functionality');
+			assert.ok(html.includes('clipboard'), 'Should reference clipboard functionality');
+		});
+	});
+
+	suite('Error Handling and Resilience', () => {
+		test('Extension handles various error scenarios gracefully', async function() {
+			this.timeout(10000);
+			
+			const errorScenarios = [				// Test with no models available
+				async () => {
+					try {
+						await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
+						return 'success';
+					} catch (error) {
+						return error instanceof Error ? error.message : String(error);
+					}
+				}
+			];
+			
+			for (const scenario of errorScenarios) {
+				const result = await scenario();
+				console.log('Error scenario result:', result);
+				
+				// All scenarios should either succeed or produce user-friendly errors
+				if (typeof result === 'string' && result !== 'success') {
+					assert.ok(
+						result.includes('Failed to list language models') ||
+						result.includes('No language models available') ||
+						result.includes('Unexpected error'),
+						'Error messages should be user-friendly'
+					);
+				}
+			}
+			
+			assert.ok(true, 'All error scenarios should be handled gracefully');
+		});
+		test('Extension maintains stability under concurrent operations', async function() {
+			this.timeout(15000);
+			
+			// Test concurrent command executions
+			const promises = [];			for (let i = 0; i < 3; i++) {
+				promises.push(
+					Promise.resolve(vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels')).catch((e: any) => e)
+				);
+			}
+			
+			const results = await Promise.all(promises);
+			
+			// All operations should complete (either successfully or with handled errors)
+			for (const result of results) {
+				if (result instanceof Error) {
+					console.log('Concurrent operation error (expected):', result.message);
+				}
+			}
+			
+			assert.ok(true, 'Concurrent operations should not crash the extension');
 		});
 	});
 

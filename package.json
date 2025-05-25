@@ -2,23 +2,36 @@
   "name": "do-vscode-lm-explorer",
   "displayName": "d.o. vscode-lm Explorer",
   "publisher": "d.o.it",
-  "description": "List all available vscode-lm chat models and show all details about each model and the send message parameters.",
-  "version": "0.0.1",
+  "description": "Comprehensive VS Code extension that explores and tests Language Model API models with modern accordion UI, complete API documentation, cancellation support, and modular architecture.",
+  "version": "0.2.0",
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Debuggers",
+    "Testing"
+  ],
+  "keywords": [
+    "language-model",
+    "ai",
+    "copilot",
+    "api",
+    "explorer",
+    "testing",
+    "documentation"
   ],
   "activationEvents": [
-    "onCommand:do-vscode-lm-explorer.showModels"
+    "onCommand:do-vscode-lm-explorer.discoverModels"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "do-vscode-lm-explorer.showModels",
-        "title": "Show all vscode-lm chat models"
+        "command": "do-vscode-lm-explorer.discoverModels",
+        "title": "AI Model Explorer: Discover & Test Available Models",
+        "category": "AI",
+        "icon": "$(search-view-icon)"
       }
     ]
   },
