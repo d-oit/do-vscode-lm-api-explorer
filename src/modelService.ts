@@ -108,13 +108,9 @@ export class ModelService {
 
 			try {
 				this.logger.appendLine(`[${new Date().toISOString()}] Testing model: ${model.id}`);
-				
-				const testOptions: vscode.LanguageModelChatRequestOptions = {
-					justification: 'Testing model capabilities for VS Code LM Explorer extension',
-					modelOptions: {
-						temperature: 0.1,
-						max_tokens: 50
-					}
+						const testOptions: vscode.LanguageModelChatRequestOptions = {
+					justification: 'Testing model capabilities for VS Code LM Explorer extension'
+					// Note: Using model defaults (no explicit modelOptions)
 				};
 
 				let resp: vscode.LanguageModelChatResponse;

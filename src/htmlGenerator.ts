@@ -321,13 +321,13 @@ export class HtmlGenerator {
 			${models.map(model => this.generateModelCard(model, sendResults)).join('')}
 		`;
 	}
-
 	private static generateModelCard(model: ExtendedLanguageModelChat, sendResults: any): string {
 		const error = sendResults && sendResults[model.id]?.error;
 		const is400 = error && error.includes('Request Failed: 400');
 		const isModelNotSupported = error && (error.includes('model_not_supported') || error.includes('Model is not supported'));
 		const errorDetails = sendResults && sendResults[model.id]?.errorDetails;
 		const response = sendResults && sendResults[model.id]?.response;
+		const requestOptions = sendResults && sendResults[model.id]?.request?.options;
 		const notSupportedIcon = '❌';
 		const supportedIcon = '✅';
 		
@@ -351,6 +351,7 @@ export class HtmlGenerator {
 						<tr><td>Version</td><td>${this.escapeHtml(model.version)}</td></tr>
 						<tr><td>Max Input Tokens</td><td>${model.maxInputTokens?.toLocaleString() || 'Unknown'}</td></tr>
 						${model.capabilities ? `<tr><td>Capabilities</td><td><div class="json-cell">${this.escapeHtml(JSON.stringify(model.capabilities, null, 2))}</div></td></tr>` : ''}
+						${requestOptions ? `<tr><td>Request Options Used</td><td><div class="json-cell">${this.escapeHtml(JSON.stringify(requestOptions, null, 2))}</div></td></tr>` : ''}
 						${response ? `<tr><td>Test Response</td><td><div class="json-cell">${this.escapeHtml(response)}</div></td></tr>` : ''}
 						${errorDetails ? `<tr><td colspan='2'><b>Error Details:</b><br>Message: ${this.escapeHtml(errorDetails.message || '')}<br>Code: ${this.escapeHtml(errorDetails.code || '')}<br>Cause: ${this.escapeHtml(String(errorDetails.cause) || '')}</td></tr>` : ''}
 					</table>
@@ -358,11 +359,10 @@ export class HtmlGenerator {
 			</div>
 		`;
 	}
-
 	private static generateRequestOptionsSection(): string {
 		return `
 			<h1>⚙️ Language Model Chat Request Options</h1>
-			<p>Complete interface documentation for <code>LanguageModelChatRequestOptions</code>:</p>
+			<p>Complete interface documentation for <code>LanguageModelChatRequestOptions</code>. This extension uses model defaults for better compatibility.</p>
 			
 			<table class="param-table">
 				<tr>
@@ -379,10 +379,11 @@ export class HtmlGenerator {
 							${param.description}
 							${param.key === 'modelOptions' ? `
 								<div class="sub-options">
-									<strong>Common modelOptions:</strong><br>
+									<strong>Common modelOptions (when specified):</strong><br>
 									${this.SUB_OPTIONS.map(sub => 
 										`• <code>${sub.key}</code> (${sub.type}): ${sub.description}<br>`
 									).join('')}
+									<em>Note: This extension uses model defaults (no explicit modelOptions) to ensure optimal compatibility across different providers.</em>
 								</div>
 							` : ''}
 						</td>

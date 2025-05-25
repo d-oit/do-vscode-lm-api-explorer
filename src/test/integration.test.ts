@@ -373,9 +373,46 @@ suite('LM Explorer Integration Tests', () => {
 			assert.ok(html.includes('justification'), 'Should document justification parameter');
 			assert.ok(html.includes('modelOptions'), 'Should document modelOptions parameter');
 			assert.ok(html.includes('tools'), 'Should document tools parameter');
-			assert.ok(html.includes('toolMode'), 'Should document toolMode parameter');
-			assert.ok(html.includes('temperature'), 'Should document temperature sub-option');
+			assert.ok(html.includes('toolMode'), 'Should document toolMode parameter');			assert.ok(html.includes('temperature'), 'Should document temperature sub-option');
 			assert.ok(html.includes('max_tokens'), 'Should document max_tokens sub-option');
+			// Check for model defaults documentation
+			assert.ok(html.includes('model defaults'), 'Should mention using model defaults');
+		});		test('HtmlGenerator displays actual request options for models', () => {
+			const testData = {
+				models: [{
+					id: 'test-model',
+					name: 'Test Model',
+					vendor: 'test',
+					family: 'test',
+					version: '1.0',
+					maxInputTokens: 1000,
+					countTokens: async () => 10,
+					sendRequest: async () => ({ 
+						text: (async function* () { yield 'test'; })(),
+						stream: (async function* () { yield { kind: 'textPart', value: 'test' }; })()
+					})
+				}],
+				modelJson: {},
+				sendResults: {
+					'test-model': {
+						response: 'Test response',
+						request: {
+							model: 'test-model',
+							messages: [{ role: 'user', content: 'test' }],
+							options: { 
+								justification: 'Testing model capabilities for VS Code LM Explorer extension'
+								// Using model defaults - no explicit modelOptions
+							}
+						}
+					}
+				}
+			};
+			
+			const html = HtmlGenerator.generateHtml(testData);
+			
+			// Check that actual request options are displayed
+			assert.ok(html.includes('Request Options Used'), 'Should show request options used in model cards');
+			assert.ok(html.includes('Testing model capabilities'), 'Should show actual justification used');
 		});
 
 		test('HtmlGenerator creates accordion UI structure', () => {

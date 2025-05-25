@@ -146,7 +146,7 @@ suite('Extension Test Suite', () => {
 						request: { 
 							model: 'github-copilot-chat', 
 							messages: [{ role: 'user', content: 'hello' }],
-							options: { justification: 'Testing' }
+							options: { justification: 'Testing model capabilities for VS Code LM Explorer extension' }
 						}
 					}
 				}
@@ -201,6 +201,32 @@ suite('Extension Test Suite', () => {
 			assert.ok(html.includes('temperature'), 'Should contain temperature sub-option');
 			assert.ok(html.includes('tools'), 'Should contain tools parameter');
 			assert.ok(html.includes('toolMode'), 'Should contain toolMode parameter');
+		});
+
+		test('generateHtml should display actual request options used', () => {
+			const data = {
+				models: [mockModels[0]],
+				modelJson: {},
+				sendResults: {
+					'github-copilot-chat': {
+						response: 'Hello!',
+						request: { 
+							model: 'github-copilot-chat', 
+							messages: [{ role: 'user', content: 'hello' }],
+							options: { 
+								justification: 'Testing model capabilities for VS Code LM Explorer extension'
+								// Note: No explicit modelOptions - using model defaults
+							}
+						}
+					}
+				}
+			};
+			
+			const html = HtmlGenerator.generateHtml(data);
+			
+			assert.ok(html.includes('Request Options Used'), 'Should show request options used section');
+			assert.ok(html.includes('Testing model capabilities for VS Code LM Explorer extension'), 'Should show actual justification used');
+			assert.ok(html.includes('github-copilot-chat'), 'Should show model ID in request data');
 		});
 
 		test('generateHtml should escape HTML content properly', () => {
