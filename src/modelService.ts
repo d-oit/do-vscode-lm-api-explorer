@@ -1,23 +1,30 @@
 import * as vscode from 'vscode';
-import { ExtendedLanguageModelChat, ModelSummary, SendResult } from './types';
+import { ExtendedLanguageModelChat, ModelSummary, SendResult, ModelNotSupportedError } from './types';
 
 export class ModelService {
 	private logger: vscode.OutputChannel;
+private _cachedModels: ExtendedLanguageModelChat[] | null = null;
+private _cachedSendResults: Record<string, SendResult> | null = null;
 
 	constructor(logger: vscode.OutputChannel) {
 		this.logger = logger;
 	}
 
 	async fetchModels(cancellationToken?: vscode.CancellationToken): Promise<ExtendedLanguageModelChat[]> {
-		this.logger.appendLine(`[${new Date().toISOString()}] Starting model fetch...`);
-		
-		if (cancellationToken?.isCancellationRequested) {
-			throw new vscode.CancellationError();
-		}
+	this.logger.appendLine(`[${new Date().toISOString()}] Starting model fetch...`);
+	
+	if (this._cachedModels) {
+		this.logger.appendLine(`[${new Date().toISOString()}] Returning cached models.`);
+		return this._cachedModels;
+	}
 
-		let models: ExtendedLanguageModelChat[] = [];
-		
-		// Try Copilot models first
+	if (cancellationToken?.isCancellationRequested) {
+		throw new vscode.CancellationError();
+	}
+
+	let models: ExtendedLanguageModelChat[] = [];
+	
+	// Try Copilot models first
 		try {
 			this.logger.appendLine(`[${new Date().toISOString()}] Fetching Copilot models...`);
 			models = await vscode.lm.selectChatModels({ vendor: 'copilot' }) as ExtendedLanguageModelChat[];
@@ -52,6 +59,7 @@ export class ModelService {
 		}
 
 		this.logger.appendLine(`[${new Date().toISOString()}] Successfully fetched ${models.length} models`);
+		this._cachedModels = models; // Cache the fetched models
 		return models;
 	}
 
@@ -92,6 +100,13 @@ export class ModelService {
 		this.logger.appendLine(`[${new Date().toISOString()}] Starting model testing...`);
 		
 		const sendResults: Record<string, SendResult> = {};
+		
+		// Check if cached results exist for the current set of models
+		if (this._cachedSendResults && this._cachedModels === models) {
+			this.logger.appendLine(`[${new Date().toISOString()}] Returning cached test results.`);
+			return this._cachedSendResults;
+		}
+
 		const totalModels = models.length;
 		
 		for (let i = 0; i < models.length; i++) {
@@ -135,7 +150,12 @@ export class ModelService {
 						};
 					}
 					this.logger.appendLine(`[${new Date().toISOString()}] Error sending request to model ${model.id}: ${String(err)}`);
-					throw err;
+					
+					if (err.message?.includes('model_not_supported') || err.message?.includes('Model is not supported')) {
+						throw new ModelNotSupportedError(model.id, err.message);
+					} else {
+						throw err;
+					}
 				}
 
 				let text = '';
@@ -177,6 +197,14 @@ export class ModelService {
 		}
 
 		this.logger.appendLine(`[${new Date().toISOString()}] Model testing completed`);
+		this._cachedSendResults = sendResults; // Cache the test results
 		return sendResults;
+	}
+
+	// Method to clear the cache, useful for testing or explicit refresh
+	public clearCache(): void {
+		this.logger.appendLine(`[${new Date().toISOString()}] Clearing ModelService cache.`);
+		this._cachedModels = null;
+		this._cachedSendResults = null;
 	}
 }

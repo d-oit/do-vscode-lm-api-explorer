@@ -33,6 +33,12 @@
         "title": "AI Model Explorer: Discover & Test Available Models",
         "category": "AI",
         "icon": "$(search-view-icon)"
+      },
+      {
+        "command": "do-vscode-lm-explorer.clearCacheAndDiscover",
+        "title": "AI Model Explorer: Clear Cache & Rediscover Models",
+        "category": "AI",
+        "icon": "$(refresh)"
       }
     ]
   },

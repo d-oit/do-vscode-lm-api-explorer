@@ -1,6 +1,14 @@
 # d.o. vscode-lm Explorer
 
-A comprehensive VS Code extension that explores and tests all available Language Model API models in your development environment. Features a modern modular architecture with enhanced UI, complete API documentation, and robust error handling.
+A **comprehensive VS Code extension** designed for developers to **explore, test, and understand** all available **Language Model (LM) API models** directly within their development environment. This powerful tool features a modern, modular architecture, an intuitive UI, complete API documentation, and robust error handling, making AI model integration seamless.
+
+## 🌟 Why Choose This Extension?
+
+-   **Accelerate AI Development**: Quickly discover and test models, reducing setup time.
+-   **Deep Dive into LM APIs**: Access comprehensive documentation and real-world examples.
+-   **Troubleshoot with Ease**: Identify unsupported models and API issues instantly.
+-   **Streamlined Workflow**: Copy API parameters and test responses with one click.
+-   **Future-Proof Your AI Apps**: Stay informed about model capabilities and compatibility.
 
 ## ✨ Features
 
@@ -45,6 +53,15 @@ A comprehensive VS Code extension that explores and tests all available Language
 - **HtmlGenerator**: Manages UI generation with accordion components
 - **Type Safety**: Comprehensive TypeScript interfaces and type definitions
 - **Extensibility**: Clean separation of concerns for future enhancements
+
+## 📸 Visuals
+
+<video src="assets/Recording d.o. vscode-lm Explorer.mp4" controls autoplay loop muted style="width: 100%; max-width: 800px; display: block; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+  Your browser does not support the video tag.
+</video>
+<p style="text-align: center; font-size: 0.9em; color: var(--vscode-descriptionForeground);">
+  *(For best experience, view this video directly on GitHub or in a Markdown viewer that supports HTML video tags.)*
+</p>
 
 ## 🚀 Getting Started
 
@@ -92,9 +109,13 @@ To access GitHub Copilot chat models through the VS Code Language Model API, you
    - Run `GitHub Copilot: Sign In`
    - Follow the authentication flow
 
-3. Verify access:
-   - Run this extension's command `AI Model Explorer: Discover & Test Available Models`
-   - You should see GitHub Copilot models listed (e.g., `copilot-gpt-4o`)
+3. **Grant Language Model Access**:
+   - The first time you run the extension's command (`AI Model Explorer: Discover & Test Available Models`), VS Code will prompt you to grant permission for this extension to access language models provided by GitHub Copilot Chat. **You must click "Allow"** for the extension to function correctly.
+   - This prompt typically looks like: "The extension 'd.o. vscode-lm Explorer' wants to access the language models provided by GitHub Copilot Chat."
+
+4. Verify access:
+   - Run this extension's command `AI Model Explorer: Discover & Test Available Models` again.
+   - You should now see GitHub Copilot models listed (e.g., `copilot-gpt-4o`).
 
 ### 🔍 Troubleshooting
 
@@ -155,11 +176,16 @@ npm test
 
 ## 📦 Installation
 
-### From VS Code Marketplace
+### 📦 Install from VS Code Marketplace
 
-1. Open VS Code Extensions view (`Ctrl+Shift+X`)
-2. Search for "d.o. vscode-lm Explorer"
-3. Click Install
+The easiest way to get started is to install the extension directly from the Visual Studio Code Marketplace:
+
+1.  Open VS Code.
+2.  Go to the Extensions view (`Ctrl+Shift+X` or `Cmd+Shift+X`).
+3.  Search for "d.o. vscode-lm Explorer".
+4.  Click **Install**.
+
+[Install d.o. vscode-lm Explorer Now!](https://marketplace.visualstudio.com/items?itemName=d.o.it.do-vscode-lm-explorer) *(Link will be updated upon publication)*
 
 ### From Source
 1. Clone this repository

@@ -3,16 +3,18 @@
 import * as vscode from 'vscode';
 import { ModelService } from './modelService';
 import { HtmlGenerator } from './htmlGenerator';
-import { ModelExplorerData } from './types';
+import { ModelExplorerData, ModelNotSupportedError } from './types';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Congratulations, your extension "do-vscode-lm-explorer" is now active!');
 
+	const logger = vscode.window.createOutputChannel('d.o.vscode-lm Explorer Log');
+	context.subscriptions.push(logger); // Ensure logger is disposed on deactivate
+
 	const disposable = vscode.commands.registerCommand('do-vscode-lm-explorer.discoverModels', async () => {
 		const start = Date.now();
-		const logger = vscode.window.createOutputChannel('d.o.vscode-lm Explorer Log');
 		logger.appendLine(`[${new Date().toISOString()}] AI Model Discovery started.`);
 		
 		try {
@@ -107,13 +109,18 @@ export function activate(context: vscode.ExtensionContext) {
 								vscode.env.openExternal(vscode.Uri.parse('https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide'));
 							}
 						});
+					} else if (err instanceof ModelNotSupportedError) {
+						vscode.window.showWarningMessage(
+							`AI Model Explorer: Model "${err.message}" is not supported for chat requests. Please check your AI provider setup.`
+						);
 					} else {
 						vscode.window.showErrorMessage(`Failed to discover AI models: ${err?.message || String(err)}`);
 					}
 				} finally {
 					const elapsed = Date.now() - start;
 					logger.appendLine(`[${new Date().toISOString()}] AI Model Discovery completed in ${elapsed}ms.`);
-					logger.dispose();
+					// The logger is now disposed via context.subscriptions.push(logger)
+					// logger.dispose(); // No longer needed here
 				}
 			});
 
@@ -125,6 +132,14 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	context.subscriptions.push(disposable);
+
+	const clearCacheDisposable = vscode.commands.registerCommand('do-vscode-lm-explorer.clearCacheAndDiscover', async () => {
+		const modelService = new ModelService(logger); // Reuse the main logger
+		modelService.clearCache();
+		vscode.window.showInformationMessage('AI Model Explorer cache cleared. Rediscovering models...');
+		await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
+	});
+	context.subscriptions.push(clearCacheDisposable);
 }
 
 // This method is called when your extension is deactivated

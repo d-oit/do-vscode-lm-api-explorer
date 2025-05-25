@@ -333,16 +333,25 @@ export class HtmlGenerator {
 		
 		return `
 			<div class="accordion">
-				<div class="accordion-header${is400 || isModelNotSupported ? ' model-error' : ''}" onclick="toggleAccordion('model-${this.escapeHtml(model.id)}')">
+				<div class="accordion-header${is400 || isModelNotSupported ? ' model-error' : ''}"
+					id="header-model-${this.escapeHtml(model.id)}"
+					role="button"
+					tabindex="0"
+					aria-expanded="false"
+					aria-controls="content-model-${this.escapeHtml(model.id)}"
+					onclick="toggleAccordion('content-model-${this.escapeHtml(model.id)}', 'header-model-${this.escapeHtml(model.id)}')">
 					<span>
-						${(is400 || isModelNotSupported) ? notSupportedIcon : supportedIcon} 
-						${this.escapeHtml(model.name)} 
+						${(is400 || isModelNotSupported) ? notSupportedIcon : supportedIcon}
+						${this.escapeHtml(model.name)}
 						<small>(${this.escapeHtml(model.id)})</small>
 						${is400 || isModelNotSupported ? ' - Not Supported' : ''}
 					</span>
 					<span class="accordion-icon">▼</span>
 				</div>
-				<div class="accordion-content" id="model-${this.escapeHtml(model.id)}">
+				<div class="accordion-content"
+					id="content-model-${this.escapeHtml(model.id)}"
+					role="region"
+					aria-labelledby="header-model-${this.escapeHtml(model.id)}">
 					${isModelNotSupported ? '<p class="model-error"><strong>⚠️ This model is not supported for chat requests</strong></p>' : ''}
 					<table class="param-table">
 						<tr><th>Property</th><th>Value</th></tr>
@@ -405,11 +414,20 @@ export class HtmlGenerator {
 			<h1>📄 JSON Data Export</h1>
 			
 			<div class="accordion">
-				<div class="accordion-header" onclick="toggleAccordion('models-json')">
+				<div class="accordion-header"
+					id="header-models-json"
+					role="button"
+					tabindex="0"
+					aria-expanded="false"
+					aria-controls="content-models-json"
+					onclick="toggleAccordion('content-models-json', 'header-models-json')">
 					<span>📊 Models Summary JSON</span>
 					<span class="accordion-icon">▼</span>
 				</div>
-				<div class="accordion-content" id="models-json">
+				<div class="accordion-content"
+					id="content-models-json"
+					role="region"
+					aria-labelledby="header-models-json">
 					<div class="json-container">
 						<div class="json-header">
 							<h3>Models Data</h3>
@@ -427,11 +445,20 @@ export class HtmlGenerator {
 			</div>
 			
 			<div class="accordion">
-				<div class="accordion-header" onclick="toggleAccordion('test-results')">
+				<div class="accordion-header"
+					id="header-test-results"
+					role="button"
+					tabindex="0"
+					aria-expanded="false"
+					aria-controls="content-test-results"
+					onclick="toggleAccordion('content-test-results', 'header-test-results')">
 					<span>🧪 Test Results JSON</span>
 					<span class="accordion-icon">▼</span>
 				</div>
-				<div class="accordion-content" id="test-results">
+				<div class="accordion-content"
+					id="content-test-results"
+					role="region"
+					aria-labelledby="header-test-results">
 					<div class="json-container">
 						<div class="json-header">
 							<h3>Send Request Results</h3>
@@ -457,14 +484,15 @@ export class HtmlGenerator {
 	private static generateScripts(): string {
 		return `
 			<script>
-				function toggleAccordion(id) {
-					const content = document.getElementById(id);
-					const header = content.previousElementSibling;
+				function toggleAccordion(contentId, headerId) {
+					const content = document.getElementById(contentId);
+					const header = document.getElementById(headerId);
 					const icon = header.querySelector('.accordion-icon');
 					
-					content.classList.toggle('active');
+					const isExpanded = content.classList.toggle('active');
 					header.classList.toggle('active');
 					icon.classList.toggle('rotated');
+					header.setAttribute('aria-expanded', isExpanded);
 				}
 				
 				function copyToClipboard(elementId) {

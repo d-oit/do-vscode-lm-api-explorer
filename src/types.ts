@@ -8,6 +8,13 @@ export interface ExtendedLanguageModelChat extends vscode.LanguageModelChat {
 	};
 }
 
+export class ModelNotSupportedError extends Error {
+    constructor(modelId: string, reason: string) {
+        super(`Model ${modelId} not supported: ${reason}`);
+        this.name = 'ModelNotSupportedError';
+    }
+}
+
 export interface ModelSummary {
 	name: string;
 	id: string;
