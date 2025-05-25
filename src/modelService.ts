@@ -21,7 +21,7 @@ export class ModelService {
 		try {
 			this.logger.appendLine(`[${new Date().toISOString()}] Fetching Copilot models...`);
 			models = await vscode.lm.selectChatModels({ vendor: 'copilot' }) as ExtendedLanguageModelChat[];
-			this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} Copilot models`);
+            this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} Copilot models`);
 		} catch (err) {
 			this.logger.appendLine(`[${new Date().toISOString()}] Error fetching Copilot models: ${String(err)}`);
 			models = [];

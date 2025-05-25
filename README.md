@@ -55,6 +55,7 @@ A comprehensive VS Code extension that explores and tests all available Language
 3. Explore comprehensive AI model information and test results
 
 ### What You'll See
+
 - **Model Overview Table**: All available models with status indicators  
 - **API Documentation**: Complete LanguageModelChatRequestOptions reference
 - **Model Details**: Expandable accordion sections with:
@@ -104,6 +105,7 @@ To access GitHub Copilot chat models through the VS Code Language Model API, you
 ## 💻 Development & Architecture
 
 ### Modular Design
+
 The extension uses a clean, modular architecture for maintainability and extensibility:
 
 ```
@@ -147,13 +149,14 @@ npm test
 
 ## 📋 Requirements
 
-- VS Code 1.100 or newer (for Language Model API support)
+- VS Code with Language Model API support
 - GitHub Copilot subscription (Individual, Business, or Enterprise)  
 - GitHub Copilot Chat extension installed and authenticated
 
 ## 📦 Installation
 
 ### From VS Code Marketplace
+
 1. Open VS Code Extensions view (`Ctrl+Shift+X`)
 2. Search for "d.o. vscode-lm Explorer"
 3. Click Install
