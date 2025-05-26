@@ -170,23 +170,32 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 					
 					logger.appendLine(`[${new Date().toISOString()}] Error during AI model discovery: ${String(err)}`);
-					
-					if (err.message?.includes('No language models available')) {
-						vscode.window.showWarningMessage(
-							UI_TEXT.NOTIFICATIONS.NO_MODELS,
-							UI_TEXT.BUTTONS.SETUP_GUIDE
-						).then(selection => {
-							if (selection === UI_TEXT.BUTTONS.SETUP_GUIDE) {
-								vscode.env.openExternal(vscode.Uri.parse(URLS.COPILOT_SETUP_GUIDE));
-							}
-						});
-					} else if (err instanceof ModelNotSupportedError) {
-						vscode.window.showWarningMessage(
-							UI_TEXT.NOTIFICATIONS.MODEL_NOT_SUPPORTED(err.message)
-						);
-					} else {
-						vscode.window.showErrorMessage(UI_TEXT.NOTIFICATIONS.ERROR(err?.message || String(err)));
-					}
+				
+				if (err.message?.includes('No language models available')) {
+					vscode.window.showWarningMessage(
+						UI_TEXT.NOTIFICATIONS.NO_MODELS,
+						UI_TEXT.BUTTONS.SETUP_GUIDE
+					).then(selection => {
+						if (selection === UI_TEXT.BUTTONS.SETUP_GUIDE) {
+							vscode.env.openExternal(vscode.Uri.parse(URLS.COPILOT_SETUP_GUIDE));
+						}
+					});
+				} else if (err.message?.includes('Language model access permission not granted')) {
+					vscode.window.showInformationMessage(
+						'Language model access permission is required. Please run the command again and click "Allow" when prompted to grant access to language models.',
+						'Try Again'
+					).then(selection => {
+						if (selection === 'Try Again') {
+							vscode.commands.executeCommand(COMMANDS.DISCOVER_MODELS);
+						}
+					});
+				} else if (err instanceof ModelNotSupportedError) {
+					vscode.window.showWarningMessage(
+						UI_TEXT.NOTIFICATIONS.MODEL_NOT_SUPPORTED(err.message)
+					);
+				} else {
+					vscode.window.showErrorMessage(UI_TEXT.NOTIFICATIONS.ERROR(err?.message || String(err)));
+				}
 				} finally {
 					const elapsed = Date.now() - start;
 					logger.appendLine(`[${new Date().toISOString()}] AI Model Discovery completed in ${elapsed}ms.`);

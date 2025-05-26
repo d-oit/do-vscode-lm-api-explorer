@@ -264,7 +264,18 @@ For detailed CI/CD documentation, see [`.github/WORKFLOW_DOCUMENTATION.md`](.git
 
 ## 📝 Release Notes
 
-### 0.2.0 (Latest) - Modular Architecture & Enhanced Features
+### 0.3.0 - Improved Packaging & VS Code Version Support
+
+#### 📦 **Packaging & Compatibility**
+- **VSIX Packaging**: Configured `vsce package` to output VSIX to the `release/` folder.
+- **Selective Inclusion**: Updated `.vscodeignore` to exclude development files and directories (`.github/`, `.husky/`, `internal/`, `scripts/`, `test-workspace/`) for a smaller, cleaner VSIX.
+- **VS Code Version Support**: Adjusted `engines.vscode` and `@types/vscode` to support VS Code version `^1.90.0` and later.
+- **Pre-publish Checks**: Ensured `vsce package` runs type checks, linting, and all tests before building the VSIX.
+
+#### 🧪 **Testing Enhancements**
+- **Increased Test Coverage**: Added more comprehensive unit and integration tests. (Note: Test count updated from 40 to 62 based on recent test run output).
+
+### 0.2.0 - Modular Architecture & Enhanced Features
 
 #### 🏗️ **Architecture Overhaul**
 - **Modular Design**: Refactored into ModelService, HtmlGenerator, and type definitions

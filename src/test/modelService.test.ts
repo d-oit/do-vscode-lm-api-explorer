@@ -56,11 +56,14 @@ const createMockModel = (
 
 suite('ModelService Unit Tests', () => {
 	let modelService: ModelService;
-	
-	setup(() => {
+		setup(() => {
 		modelService = new ModelService(mockOutputChannel);
 		// Clear any cached data before each test
 		modelService.clearCache();
+	});
+	
+	teardown(() => {
+		mockOutputChannel.dispose();
 	});
 
 	test('should create ModelService instance', () => {

@@ -164,7 +164,7 @@ export const PROGRESS_STEPS = {
 
 // External URLs
 export const URLS = {
-    COPILOT_SETUP_GUIDE: 'https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide',
+    COPILOT_SETUP_GUIDE: 'https://docs.github.com/en/copilot/using-github-copilot',
     PREMIUM_REQUESTS_INFO: 'https://docs.github.com/en/copilot/managing-copilot/monitoring-usage-and-entitlements/about-premium-requests'
 } as const;
 

@@ -12,3 +12,10 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+.github/
+.husky/
+internal/
+scripts/
+test-workspace/
+.roomodes
+SETUP_COMPLETION_GUIDE.md

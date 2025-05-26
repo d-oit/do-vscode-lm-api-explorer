@@ -11,28 +11,33 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 	constructor(logger: vscode.OutputChannel) {
 		this.logger = logger;
 	}
-
 	async fetchModels(cancellationToken?: vscode.CancellationToken): Promise<ExtendedLanguageModelChat[]> {
-	this.logger.appendLine(`[${new Date().toISOString()}] Starting model fetch...`);
-	
-	if (this._cachedModels) {
-		this.logger.appendLine(`[${new Date().toISOString()}] Returning cached models.`);
-		return this._cachedModels;
-	}
+		this.logger.appendLine(`[${new Date().toISOString()}] Starting model fetch...`);
+		
+		if (this._cachedModels) {
+			this.logger.appendLine(`[${new Date().toISOString()}] Returning cached models.`);
+			return this._cachedModels;
+		}
 
-	if (cancellationToken?.isCancellationRequested) {
-		throw new vscode.CancellationError();
-	}
+		if (cancellationToken?.isCancellationRequested) {
+			throw new vscode.CancellationError();
+		}
 
-	let models: ExtendedLanguageModelChat[] = [];
-	
-	// Try Copilot models first
+		let models: ExtendedLanguageModelChat[] = [];
+		
+		// Try Copilot models first
 		try {
 			this.logger.appendLine(`[${new Date().toISOString()}] Fetching Copilot models...`);
 			models = await vscode.lm.selectChatModels({ vendor: 'copilot' }) as ExtendedLanguageModelChat[];
-            this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} Copilot models`);
-		} catch (err) {
+			this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} Copilot models`);		} catch (err) {
 			this.logger.appendLine(`[${new Date().toISOString()}] Error fetching Copilot models: ${String(err)}`);
+			
+			// Check if this is a permission issue
+			if (err instanceof vscode.LanguageModelError) {
+				if (err.code === vscode.LanguageModelError.NoPermissions.name) {
+					throw new Error('Language model access permission not granted. Please run the command again and grant permission when prompted.');
+				}
+			}
 			models = [];
 		}
 
@@ -45,9 +50,15 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 			try {
 				this.logger.appendLine(`[${new Date().toISOString()}] Fetching all available models...`);
 				models = await vscode.lm.selectChatModels({}) as ExtendedLanguageModelChat[];
-				this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} total models`);
-			} catch (err) {
+				this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} total models`);			} catch (err) {
 				this.logger.appendLine(`[${new Date().toISOString()}] Error fetching all models: ${String(err)}`);
+				
+				// Check if this is a permission issue
+				if (err instanceof vscode.LanguageModelError) {
+					if (err.code === vscode.LanguageModelError.NoPermissions.name) {
+						throw new Error('Language model access permission not granted. Please run the command again and grant permission when prompted.');
+					}
+				}
 				throw new Error(`Failed to fetch language models: ${String(err)}`);
 			}
 		}
@@ -55,6 +66,7 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 		if (cancellationToken?.isCancellationRequested) {
 			throw new vscode.CancellationError();
 		}
+		
 		if (!models || models.length === 0) {
 			throw new Error(ERROR_MESSAGES.NO_MODELS);
 		}
@@ -127,9 +139,7 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 				};
 
 				let resp: vscode.LanguageModelChatResponse;
-				let errorDetails: any = undefined;
-
-				try {
+				let errorDetails: any = undefined;				try {
 					resp = await model.sendRequest(
 						[vscode.LanguageModelChatMessage.User(UI_TEXT.TEST.MESSAGE)], 
 						testOptions,
@@ -138,6 +148,12 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 				} catch (err: any) {
 					if (err instanceof vscode.CancellationError) {
 						throw err;
+					}
+							// Handle LanguageModelError specifically
+					if (err instanceof vscode.LanguageModelError) {
+						if (err.code === vscode.LanguageModelError.NoPermissions.name) {
+							throw new Error('Language model access permission not granted. Please run the command again and grant permission when prompted.');
+						}
 					}
 					
 					if (err && typeof err === 'object' && 'message' in err) {
