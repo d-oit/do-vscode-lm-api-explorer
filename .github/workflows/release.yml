@@ -3,6 +3,11 @@ name: Release
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -69,9 +74,7 @@ jobs:
 
       - name: Get package name
         id: package-name
-        run: echo "name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub Release
+        run: echo "name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT      - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
@@ -82,8 +85,7 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to VS Code Marketplace
         run: vsce publish --no-dependencies
