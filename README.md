@@ -211,6 +211,33 @@ The easiest way to get started is to install the extension directly from the Vis
 
 Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests.
 
+### Development Workflow
+
+This project uses a **GitFlow-inspired branching strategy** with automated CI/CD:
+
+#### 🌿 **Branch Strategy**
+- **`dev` branch**: All development work happens here
+- **`master` branch**: Release-only branch with automated publishing
+- **Feature branches**: Created from and merged back into `dev`
+
+#### 🔄 **Release Process**
+1. **Development**: Work in `dev` branch or feature branches
+2. **Version Bump**: Use release helper script:
+   ```powershell
+   npm run release:prepare
+   # or for bash: npm run release:prepare:bash
+   ```
+3. **Create PR**: From `dev` to `master` branch
+4. **Automated Release**: Upon merge to `master`:
+   - Creates GitHub release with auto-generated notes
+   - Publishes to VS Code Marketplace
+   - Tags version automatically
+
+#### 🚀 **CI/CD Pipelines**
+- **Development CI**: Runs tests and creates build artifacts for `dev` branch
+- **Master Protection**: Validates PRs to `master` (version bump, tests, builds)
+- **Release Automation**: Publishes to GitHub and VS Code Marketplace on `master` push
+
 ### Development Setup
 ```bash
 git clone <repository-url>
@@ -224,6 +251,14 @@ npm run compile
 npm run package  # Build for production
 npm run watch    # Watch mode for development
 ```
+
+#### 🛠️ **Available Scripts**
+- `npm run release:prepare` - Interactive version bump and release preparation
+- `npm test` - Run test suite
+- `npm run lint` - Code linting
+- `npm run check-types` - TypeScript type checking
+
+For detailed CI/CD documentation, see [`.github/WORKFLOW_DOCUMENTATION.md`](.github/WORKFLOW_DOCUMENTATION.md).
 
 ## 📝 Release Notes
 

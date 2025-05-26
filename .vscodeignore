@@ -12,5 +12,3 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
-assets/**/*.mp4
-internal/**
