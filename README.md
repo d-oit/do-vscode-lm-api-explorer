@@ -15,9 +15,9 @@ A **comprehensive VS Code extension** designed for developers to **explore, test
 ### 🔍 **Model Discovery & Testing**
 
 - **Automatic Discovery**: Finds all available VS Code LM API chat models
-- **Smart Testing**: Tests each model with a "hello" message to verify functionality  
+- **Smart Testing**: Conditionally tests each model with a "hello" message to verify functionality, based on user choice after the premium request warning (starting June 4, 2025)
 - **Premium Request Awareness**: Starting June 4, 2025, shows warning about GitHub Copilot premium request usage
-- **User Choice Options**: Choose to test models (premium requests) or skip testing to avoid usage
+- **User Choice Options**: Provides clear options to either test models (potentially consuming premium requests) or skip testing to avoid usage, especially relevant after the premium request warning date.
 - **Real-time Progress**: Shows detailed progress with cancellation support
 - **Error Detection**: Identifies and clearly displays unsupported models
 
@@ -82,7 +82,8 @@ https://github.com/user-attachments/assets/0e724a25-f20d-47e6-81f6-e00eff36e6fb
 1. Open VS Code Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 2. Run `AI Model Explorer: Discover & Test Available Models`
 3. If prompted (after June 4, 2025), choose your preferred testing approach regarding premium requests
-4. Explore comprehensive AI model information and test results
+4. Optionally, run `AI Model Explorer: Clear Cache and Discover Available Models` to force a fresh discovery and clear cached results.
+5. Explore comprehensive AI model information and test results
 
 ### What You'll See
 
@@ -155,6 +156,7 @@ src/
 ### Key Components
 
 #### ModelService
+- Handles model discovery, testing, and data processing. Includes a caching mechanism for models and test results to improve performance on subsequent runs.
 - `fetchModels()`: Discovers available LM API models
 - `buildModelSummary()`: Processes model metadata and capabilities
 - `testModels()`: Tests model functionality with progress reporting
@@ -172,7 +174,7 @@ src/
 ## 🧪 Testing
 
 The extension includes comprehensive test coverage:
-- **36 passing tests** across unit and integration test suites
+- **40 passing tests** across unit and integration test suites
 - **Modular component testing** for ModelService and HtmlGenerator
 - **Cancellation and error handling** validation
 - **HTML security and XSS protection** testing

@@ -12,9 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-
-      - name: Check if PR is from dev branch
+          fetch-depth: 0      - name: Check if PR is from dev branch
         run: |
           if [ "${{ github.head_ref }}" != "dev" ]; then
             echo "❌ Pull requests to main branch must come from dev branch only"
