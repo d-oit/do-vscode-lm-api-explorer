@@ -19,14 +19,14 @@ async function main() {
 		console.log('Running in CI environment:', isCI);
 		// Configure launch arguments based on environment
 		const launchArgs = isCI ? [
-			'--headless', // Add this flag for headless execution in CI
+			// '--headless', // Add this flag for headless execution in CI
 			'--disable-gpu',
 			'--disable-dev-shm-usage',
 			'--no-sandbox',
-			'--disable-background-timer-throttling',
-			'--disable-backgrounding-occluded-windows',
-			'--disable-renderer-backgrounding',
-			'--disable-extensions-except=' + extensionDevelopmentPath,
+			// '--disable-background-timer-throttling',
+			// '--disable-backgrounding-occluded-windows',
+			// '--disable-renderer-backgrounding',
+			// '--disable-extensions-except=' + extensionDevelopmentPath,
 			'--disable-workspace-trust'
 		] : [];
 		console.log('Launch arguments:', launchArgs);
