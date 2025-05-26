@@ -196,8 +196,13 @@ export class HtmlGenerator {
 				border: 1px solid var(--vscode-inputValidation-errorBorder, #be1100);
 			}
 			
-			.model-error strong { 
-				font-weight: bold; 
+			.model-skipped { 
+				color: var(--vscode-foreground, #333333);
+				background: var(--vscode-inputValidation-warningBackground, #ffcc02);
+				padding: 0.75em;
+				border-radius: 6px;
+				margin: 0.5em 0;
+				border: 1px solid var(--vscode-inputValidation-warningBorder, #cc9900);
 			}
 			
 			h2.model-error { 
@@ -282,12 +287,25 @@ export class HtmlGenerator {
 		const errorDetails = sendResults && sendResults[model.id]?.errorDetails;
 		const response = sendResults && sendResults[model.id]?.response;
 		const requestOptions = sendResults && sendResults[model.id]?.request?.options;
-		const notSupportedIcon = HTML_CONTENT.BADGES.NOT_SUPPORTED;
+		const testSkipped = sendResults && sendResults[model.id]?.testSkipped;		const notSupportedIcon = HTML_CONTENT.BADGES.NOT_SUPPORTED;
 		const supportedIcon = HTML_CONTENT.BADGES.SUPPORTED;
+		const skippedIcon = '⏭️'; // Symbol for skipped testing
+		
+		// Determine the appropriate icon and status message
+		let statusIcon: string = supportedIcon;
+		let statusText = '';
+		
+		if (testSkipped) {
+			statusIcon = skippedIcon;
+			statusText = ' - Testing Skipped';
+		} else if (is400 || isModelNotSupported) {
+			statusIcon = notSupportedIcon;
+			statusText = ' - Not Supported';
+		}
 		
 		return `
 			<div class="accordion">
-				<div class="accordion-header${is400 || isModelNotSupported ? ' model-error' : ''}"
+				<div class="accordion-header${is400 || isModelNotSupported ? ' model-error' : (testSkipped ? ' model-skipped' : '')}"
 					id="header-model-${this.escapeHtml(model.id)}"
 					role="button"
 					tabindex="0"
@@ -295,10 +313,10 @@ export class HtmlGenerator {
 					aria-controls="content-model-${this.escapeHtml(model.id)}"
 					onclick="toggleAccordion('content-model-${this.escapeHtml(model.id)}', 'header-model-${this.escapeHtml(model.id)}')">
 					<span>
-						${(is400 || isModelNotSupported) ? notSupportedIcon : supportedIcon}
+						${statusIcon}
 						${this.escapeHtml(model.name)}
 						<small>(${this.escapeHtml(model.id)})</small>
-						${is400 || isModelNotSupported ? ' - Not Supported' : ''}
+						${statusText}
 					</span>
 					<span class="accordion-icon">▼</span>
 				</div>
@@ -307,6 +325,7 @@ export class HtmlGenerator {
 					role="region"
 					aria-labelledby="header-model-${this.escapeHtml(model.id)}">
 					${isModelNotSupported ? '<p class="model-error"><strong>⚠️ This model is not supported for chat requests</strong></p>' : ''}
+					${testSkipped ? '<p class="model-skipped"><strong>⏭️ Model testing was skipped to avoid premium request usage</strong></p>' : ''}
 					<table class="param-table">
 						<tr><th>Property</th><th>Value</th></tr>
 						<tr><td>Vendor</td><td>${this.escapeHtml(model.vendor)}</td></tr>
@@ -314,14 +333,15 @@ export class HtmlGenerator {
 						<tr><td>Version</td><td>${this.escapeHtml(model.version)}</td></tr>
 						<tr><td>Max Input Tokens</td><td>${model.maxInputTokens && model.maxInputTokens > 0 ? model.maxInputTokens.toLocaleString() : 'Unknown'}</td></tr>
 						${model.capabilities ? `<tr><td>Capabilities</td><td><div class="json-cell">${this.escapeHtml(JSON.stringify(model.capabilities, null, 2))}</div></td></tr>` : ''}
-						${requestOptions ? `<tr><td>Request Options Used</td><td><div class="json-cell">${this.escapeHtml(JSON.stringify(requestOptions, null, 2))}</div></td></tr>` : ''}
-						${response ? `<tr><td>Test Response</td><td><div class="json-cell">${this.escapeHtml(response)}</div></td></tr>` : ''}
+						${requestOptions && !testSkipped ? `<tr><td>Request Options Used</td><td><div class="json-cell">${this.escapeHtml(JSON.stringify(requestOptions, null, 2))}</div></td></tr>` : ''}
+						${response && !testSkipped ? `<tr><td>Test Response</td><td><div class="json-cell">${this.escapeHtml(response)}</div></td></tr>` : ''}
+						${testSkipped ? `<tr><td>Testing Status</td><td><div class="json-cell">Testing was skipped to avoid premium request usage. To test this model, run the command again and choose "Test Models" when prompted.</div></td></tr>` : ''}
 						${errorDetails ? `<tr><td colspan='2'><b>Error Details:</b><br>Message: ${this.escapeHtml(errorDetails.message || '')}<br>Code: ${this.escapeHtml(errorDetails.code || '')}<br>Cause: ${this.escapeHtml(String(errorDetails.cause) || '')}</td></tr>` : ''}
 					</table>
 				</div>
 			</div>
 		`;
-	}	private static generateRequestOptionsSection(): string {
+	}private static generateRequestOptionsSection(): string {
 		return `
 			<h1>${HTML_CONTENT.SECTIONS.REQUEST_OPTIONS}</h1>
 			<p>Complete interface documentation for <code>LanguageModelChatRequestOptions</code>. This extension uses model defaults for better compatibility.</p>

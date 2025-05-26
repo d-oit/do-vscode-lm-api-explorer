@@ -4,6 +4,31 @@ All notable changes to the "do-vscode-lm-explorer" extension will be documented 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.3.0] - 2025-05-26 - Premium Request Warning & User Choice
+
+### Added
+- **Premium Request Warning**: Shows warning dialog after June 4, 2025 about GitHub Copilot premium request usage
+- **User Choice Options**: Three options when premium warning appears:
+  - "Test Models": Proceed with normal testing (consumes premium requests)
+  - "Skip Testing": Discover models without testing to avoid premium requests
+  - "Learn More": Opens GitHub's premium requests documentation
+- **Skip Testing Mode**: Visual indicators (⏭️) and explanatory messages for skipped model testing
+- **Date-Based Logic**: Automatic activation of warning based on current date vs. June 4, 2025
+- **Enhanced UI**: New CSS styling for skipped testing state with warning background colors
+- **Comprehensive Tests**: Added 4 new tests covering premium request warning scenarios
+
+### Changed
+- **Model Testing**: Now conditional based on user choice after premium warning
+- **Success Messages**: Different notifications depending on whether testing was performed or skipped
+- **Model Cards**: Enhanced to show testing status and premium request explanations
+- **Constants**: Added new UI text, button labels, dates, and URLs for premium request handling
+
+### Technical Details
+- **Date Constant**: `DATES.PREMIUM_REQUEST_WARNING_START` set to June 4, 2025
+- **Premium Request URL**: Links to official GitHub documentation about premium requests
+- **Conditional Testing**: `testSkipped` flag in send results to track skipped models
+- **Enhanced HTML Generator**: Handles both tested and skipped model states with appropriate styling
+
 ## [0.2.0] - 2025-05-25 - Modular Architecture & Enhanced Features
 
 ### Added

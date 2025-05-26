@@ -18,8 +18,7 @@ export const UI_TEXT = {
         ANALYZING: 'Analyzing model capabilities...',
         TESTING: 'Testing AI model responses...',
         PREPARING: 'Preparing AI model explorer...',
-        COMPLETE: 'AI Model Discovery Complete!'
-    },
+        COMPLETE: 'AI Model Discovery Complete!'    },
     
     // Notifications
     NOTIFICATIONS: {
@@ -28,14 +27,18 @@ export const UI_TEXT = {
         CACHE_CLEARED: 'AI Model Explorer cache cleared. Rediscovering models...',
         CANCELLED: 'AI model discovery was cancelled.',
         ERROR: (error: string) => `Failed to discover AI models: ${error}`,
-        MODEL_NOT_SUPPORTED: (modelId: string) => `AI Model Explorer: Model "${modelId}" is not supported for chat requests. Please check your AI provider setup.`
-    },
+        MODEL_NOT_SUPPORTED: (modelId: string) => `AI Model Explorer: Model "${modelId}" is not supported for chat requests. Please check your AI provider setup.`,
+        PREMIUM_REQUEST_WARNING: '⚠️ Important: Testing models will send requests that count as premium requests to your GitHub Copilot account. This may consume your monthly quota. Learn more: https://docs.github.com/en/copilot/managing-copilot/monitoring-usage-and-entitlements/about-premium-requests',
+        SUCCESS_WITHOUT_TEST: (count: number) => `🤖 Discovered ${count} AI models! Model testing was skipped to avoid premium request usage.`    },
     
     // Button Labels
     BUTTONS: {
         OPEN_EXPLORER: 'Open Explorer',
         SETUP_GUIDE: 'Setup Guide',
-        COPY: 'Copy'
+        COPY: 'Copy',
+        TEST_MODELS: 'Test Models',
+        SKIP_TESTING: 'Skip Testing',
+        LEARN_MORE: 'Learn More'
     },
     
     // Webview Constants
@@ -67,7 +70,9 @@ export const HTML_CONTENT = {
         NOT_SUPPORTED: '❌',
         REQUIRED: 'REQUIRED',
         OPTIONAL: 'OPTIONAL'
-    },    TOAST_MESSAGES: {
+    },
+    
+    TOAST_MESSAGES: {
         COPIED: 'Copied to clipboard!',
         COPY_FAILED: 'Copy failed'
     },
@@ -159,7 +164,13 @@ export const PROGRESS_STEPS = {
 
 // External URLs
 export const URLS = {
-    COPILOT_SETUP_GUIDE: 'https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide'
+    COPILOT_SETUP_GUIDE: 'https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide',
+    PREMIUM_REQUESTS_INFO: 'https://docs.github.com/en/copilot/managing-copilot/monitoring-usage-and-entitlements/about-premium-requests'
+} as const;
+
+// Date Constants
+export const DATES = {
+    PREMIUM_REQUEST_WARNING_START: new Date('2025-06-04T00:00:00Z')
 } as const;
 
 // Error Messages

@@ -15,7 +15,9 @@ A **comprehensive VS Code extension** designed for developers to **explore, test
 ### 🔍 **Model Discovery & Testing**
 
 - **Automatic Discovery**: Finds all available VS Code LM API chat models
-- **Live Testing**: Tests each model with a "hello" message to verify functionality  
+- **Smart Testing**: Tests each model with a "hello" message to verify functionality  
+- **Premium Request Awareness**: Starting June 4, 2025, shows warning about GitHub Copilot premium request usage
+- **User Choice Options**: Choose to test models (premium requests) or skip testing to avoid usage
 - **Real-time Progress**: Shows detailed progress with cancellation support
 - **Error Detection**: Identifies and clearly displays unsupported models
 
@@ -23,8 +25,9 @@ A **comprehensive VS Code extension** designed for developers to **explore, test
 
 - **Model Metadata**: Name, ID, vendor, family, version, max input tokens
 - **Capabilities**: Support for image-to-text, tool calling, and other features
-- **Test Results**: Complete request/response data for each model
-- **Support Status**: Visual indicators (✅/❌) for model availability
+- **Test Results**: Complete request/response data for each model (when testing is performed)
+- **Support Status**: Visual indicators (✅/❌/⏭️) for model availability and testing status
+- **Premium Request Info**: Clear indicators when testing was skipped to avoid premium usage
 
 ### 🎨 **Modern UI & UX**
 
@@ -54,6 +57,16 @@ A **comprehensive VS Code extension** designed for developers to **explore, test
 - **Type Safety**: Comprehensive TypeScript interfaces and type definitions
 - **Extensibility**: Clean separation of concerns for future enhancements
 
+### ⚠️ **Premium Request Management**
+
+- **Smart Warning System**: Starting June 4, 2025, shows informative dialog about GitHub Copilot premium request usage
+- **User Choice Options**: When premium billing is active, choose how to proceed:
+  - **"Test Models"**: Run full testing (consumes premium requests from your GitHub Copilot quota)
+  - **"Skip Testing"**: Discover models without testing to avoid premium request usage
+  - **"Learn More"**: Access official GitHub documentation about premium requests
+- **Visual Indicators**: Clear status icons (⏭️) and explanatory messages for skipped testing
+- **Transparent Usage**: Always informed about when premium requests will be consumed
+
 ## 📸 Visuals
 
 <video src="assets/Recording d.o. vscode-lm Explorer.mp4" controls autoplay loop muted style="width: 100%; max-width: 800px; display: block; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
@@ -69,20 +82,24 @@ A **comprehensive VS Code extension** designed for developers to **explore, test
 
 1. Open VS Code Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 2. Run `AI Model Explorer: Discover & Test Available Models`
-3. Explore comprehensive AI model information and test results
+3. If prompted (after June 4, 2025), choose your preferred testing approach regarding premium requests
+4. Explore comprehensive AI model information and test results
 
 ### What You'll See
 
-- **Model Overview Table**: All available models with status indicators  
+- **Premium Request Dialog**: (After June 4, 2025) Choice between testing models or skipping to avoid premium usage
+- **Model Overview Table**: All available models with status indicators (✅/❌/⏭️)
 - **API Documentation**: Complete LanguageModelChatRequestOptions reference
 - **Model Details**: Expandable accordion sections with:
   - Model metadata and capabilities
-  - Live test results and response data
+  - Live test results and response data (when testing is performed)
+  - Premium request status and explanations (when testing is skipped)
   - Copy-to-clipboard functionality for easy integration
 
 ## 🎯 Use Cases
 
-**🔍 Discovery**: New to VS Code AI integration? Discover what models are available and working
+**🔍 Discovery**: New to VS Code AI integration? Discover what models are available and working  
+**💰 Cost Management**: Want to avoid premium request charges? Use skip testing mode to explore models  
 **🛠️ Development**: Building AI-powered extensions? Get exact API parameters and test responses  
 **🐛 Troubleshooting**: AI features not working? Test model compatibility and identify issues
 **📊 Comparison**: Multiple AI providers? Compare capabilities and responses side-by-side

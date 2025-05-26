@@ -9,7 +9,8 @@ import {
 	COMMANDS, 
 	UI_TEXT, 
 	PROGRESS_STEPS, 
-	URLS 
+	URLS,
+	DATES 
 } from './constants';
 
 // This method is called when your extension is activated
@@ -53,16 +54,71 @@ export function activate(context: vscode.ExtensionContext) {
 						return;
 					}
 
-					// Step 3: Test models (most time-consuming step)
-					progressReporter.reportStep(UI_TEXT.PROGRESS.TESTING, PROGRESS_STEPS.TEST_MODELS.increment);
-					const sendResults = await modelService.testModels(models, progressReporter.getVSCodeProgress(), cancellationToken);
+					// Step 3: Check for premium request warning (after January 6, 2025)
+					let shouldTestModels = true;
+					const currentDate = new Date();
+					
+					if (currentDate >= DATES.PREMIUM_REQUEST_WARNING_START) {
+						// Show premium request warning and get user choice
+						const userChoice = await vscode.window.showWarningMessage(
+							UI_TEXT.NOTIFICATIONS.PREMIUM_REQUEST_WARNING,
+							{
+								modal: true,
+								detail: 'Testing models will send a test message to each model, which counts as premium requests. You can skip testing to avoid using your quota and still view model information.'
+							},
+							UI_TEXT.BUTTONS.TEST_MODELS,
+							UI_TEXT.BUTTONS.SKIP_TESTING,
+							UI_TEXT.BUTTONS.LEARN_MORE
+						);
+
+						if (userChoice === UI_TEXT.BUTTONS.LEARN_MORE) {
+							vscode.env.openExternal(vscode.Uri.parse(URLS.PREMIUM_REQUESTS_INFO));
+							// Show the dialog again after opening the link
+							const secondChoice = await vscode.window.showWarningMessage(
+								UI_TEXT.NOTIFICATIONS.PREMIUM_REQUEST_WARNING,
+								{
+									modal: true,
+									detail: 'Testing models will send a test message to each model, which counts as premium requests. You can skip testing to avoid using your quota and still view model information.'
+								},
+								UI_TEXT.BUTTONS.TEST_MODELS,
+								UI_TEXT.BUTTONS.SKIP_TESTING
+							);
+							shouldTestModels = secondChoice === UI_TEXT.BUTTONS.TEST_MODELS;
+						} else if (userChoice === UI_TEXT.BUTTONS.SKIP_TESTING || !userChoice) {
+							shouldTestModels = false;
+						}
+						// If TEST_MODELS was chosen, shouldTestModels remains true
+					}
+
+					if (cancellationToken.isCancellationRequested) {
+						logger.appendLine(`[${new Date().toISOString()}] Operation cancelled by user`);
+						return;
+					}
+
+					// Step 4: Test models (most time-consuming step) - only if user chose to test
+					let sendResults: Record<string, any> = {};
+					
+					if (shouldTestModels) {
+						progressReporter.reportStep(UI_TEXT.PROGRESS.TESTING, PROGRESS_STEPS.TEST_MODELS.increment);
+						sendResults = await modelService.testModels(models, progressReporter.getVSCodeProgress(), cancellationToken);
+					} else {
+						// Skip testing but still report progress
+						progressReporter.reportStep('Skipping model testing...', PROGRESS_STEPS.TEST_MODELS.increment);
+						// Create empty results with a note that testing was skipped
+						for (const model of models) {
+							sendResults[model.id] = { 
+								response: 'Testing skipped to avoid premium request usage',
+								testSkipped: true
+							};
+						}
+					}
 					
 					if (cancellationToken.isCancellationRequested) {
 						logger.appendLine(`[${new Date().toISOString()}] Operation cancelled by user`);
 						return;
 					}
 
-					// Step 4: Generate and show results
+					// Step 5: Generate and show results
 					progressReporter.reportStep(UI_TEXT.PROGRESS.PREPARING, PROGRESS_STEPS.PREPARE_RESULTS.increment);
 					
 					const explorerData: ModelExplorerData = {
@@ -93,8 +149,12 @@ export function activate(context: vscode.ExtensionContext) {
 					logger.appendLine(`[${new Date().toISOString()}] Successfully discovered ${models.length} AI models`);
 					
 					// Show a helpful notification
+					const successMessage = shouldTestModels 
+						? UI_TEXT.NOTIFICATIONS.SUCCESS(models.length)
+						: UI_TEXT.NOTIFICATIONS.SUCCESS_WITHOUT_TEST(models.length);
+						
 					vscode.window.showInformationMessage(
-						UI_TEXT.NOTIFICATIONS.SUCCESS(models.length),
+						successMessage,
 						UI_TEXT.BUTTONS.OPEN_EXPLORER
 					).then(selection => {
 						if (selection === UI_TEXT.BUTTONS.OPEN_EXPLORER) {

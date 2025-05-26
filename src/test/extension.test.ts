@@ -4,6 +4,7 @@ import * as myExtension from '../extension';
 import { ModelService } from '../modelService';
 import { HtmlGenerator } from '../htmlGenerator';
 import { ExtendedLanguageModelChat, ModelSummary, SendResult } from '../types';
+import { DATES } from '../constants';
 
 // Mock data for testing
 const mockModels: ExtendedLanguageModelChat[] = [
@@ -245,6 +246,74 @@ suite('Extension Test Suite', () => {
 			assert.ok(html.includes('&lt;script&gt;'), 'Should escape < and > in script tags');
 			assert.ok(html.includes('test&amp;vendor'), 'Should escape & in vendor name');
 			assert.ok(!html.includes('<script>alert'), 'Should not contain unescaped script tags');
+		});
+	});
+
+	suite('Premium Request Warning Tests', () => {
+		test('Should show premium warning after June 4, 2025', () => {
+			const currentDate = new Date('2025-06-05T00:00:00Z'); // After the warning date
+			const warningDate = DATES.PREMIUM_REQUEST_WARNING_START;
+			
+			const shouldShowWarning = currentDate >= warningDate;
+			assert.ok(shouldShowWarning, 'Should show warning after June 4, 2025');
+		});
+
+		test('Should not show premium warning before June 4, 2025', () => {
+			const currentDate = new Date('2025-06-03T00:00:00Z'); // Before the warning date
+			const warningDate = DATES.PREMIUM_REQUEST_WARNING_START;
+			
+			const shouldShowWarning = currentDate >= warningDate;
+			assert.ok(!shouldShowWarning, 'Should not show warning before June 4, 2025');
+		});
+
+		test('generateHtml should handle testSkipped models correctly', () => {
+			const data = {
+				models: [mockModels[0]],
+				modelJson: { 'github-copilot-chat': { 
+					name: 'GitHub Copilot Chat',
+					id: 'github-copilot-chat',
+					vendor: 'copilot',
+					family: 'gpt-4',
+					version: '1.0',
+					maxInputTokens: 8192
+				}},
+				sendResults: {
+					'github-copilot-chat': {
+						testSkipped: true
+					}
+				}
+			};
+			
+			const html = HtmlGenerator.generateHtml(data);
+			
+			assert.ok(html.includes('⏭️'), 'Should contain skip icon for testSkipped model');
+			assert.ok(html.includes('Testing Skipped'), 'Should show testing skipped text');
+			assert.ok(html.includes('model-skipped'), 'Should apply model-skipped CSS class');
+			assert.ok(html.includes('Testing was skipped to avoid premium request usage'), 'Should show premium request explanation');
+		});
+
+		test('generateHtml should not show test results when testSkipped is true', () => {
+			const data = {
+				models: [mockModels[0]],
+				modelJson: {},
+				sendResults: {
+					'github-copilot-chat': {
+						testSkipped: true,
+						response: 'This should not appear',
+						request: { 
+							model: 'github-copilot-chat', 
+							messages: [{ role: 'user', content: 'hello' }],
+							options: { justification: 'Testing' }
+						}
+					}
+				}
+			};
+			
+			const html = HtmlGenerator.generateHtml(data);
+			
+			assert.ok(!html.includes('Request Options Used'), 'Should not show request options when testSkipped');
+			assert.ok(!html.includes('Test Response'), 'Should not show test response when testSkipped');
+			assert.ok(!html.includes('This should not appear'), 'Should not show response content when testSkipped');
 		});
 	});
 });
