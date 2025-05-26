@@ -14,17 +14,32 @@ async function main() {
 		console.log('Extension development path:', extensionDevelopmentPath);
 		console.log('Extension tests path:', extensionTestsPath);
 
+		// Detect if we're in a CI environment
+		const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+		console.log('Running in CI environment:', isCI);
+
+		// Configure launch arguments based on environment
+		const launchArgs = isCI ? [
+			'--headless',
+			'--disable-gpu',
+			'--disable-dev-shm-usage',
+			'--no-sandbox',
+			'--disable-background-timer-throttling',
+			'--disable-backgrounding-occluded-windows',
+			'--disable-renderer-backgrounding'
+		] : [
+			'--headless'
+		];
+
+		console.log('Launch arguments:', launchArgs);
+
 		// Download VS Code, unzip it and run the tests
 		await runTests({ 
 			extensionDevelopmentPath, 
 			extensionTestsPath,
-			// Run VS Code in headless mode for CI environments
-			launchArgs: [
-				'--headless',
-				'--disable-gpu',
-				'--disable-dev-shm-usage',
-				'--no-sandbox'
-			]
+			launchArgs,
+			// Add version specification for better compatibility
+			version: 'stable'
 		});
 	} catch (err) {
 		console.error('Failed to run tests:', err);

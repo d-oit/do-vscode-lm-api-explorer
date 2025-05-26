@@ -29,18 +29,19 @@ jobs:
         run: npm run pretest
 
       - name: Run linting
-        run: npm run lint
-
-      - name: Set up display for headless testing
+        run: npm run lint      - name: Set up display for headless testing
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libgtk-3-dev libxss1 libasound2-dev
+          sudo apt-get install -y xvfb libgtk-3-dev libxss1 libasound2-dev dbus-x11
+          # Setup D-Bus session for VS Code
+          dbus-launch --exit-with-session true
 
       - name: Run tests
         run: xvfb-run -a npm test
         env:
           CI: true
           DISPLAY: :99
+          DBUS_SESSION_BUS_ADDRESS: unix:path=/dev/null
 
   release:
     needs: test
