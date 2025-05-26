@@ -17,20 +17,17 @@ async function main() {
 		// Detect if we're in a CI environment
 		const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 		console.log('Running in CI environment:', isCI);
-
 		// Configure launch arguments based on environment
 		const launchArgs = isCI ? [
-			'--headless',
 			'--disable-gpu',
 			'--disable-dev-shm-usage',
 			'--no-sandbox',
 			'--disable-background-timer-throttling',
 			'--disable-backgrounding-occluded-windows',
-			'--disable-renderer-backgrounding'
-		] : [
-			'--headless'
-		];
-
+			'--disable-renderer-backgrounding',
+			'--disable-extensions-except=' + extensionDevelopmentPath,
+			'--disable-workspace-trust'
+		] : [];
 		console.log('Launch arguments:', launchArgs);
 
 		// Download VS Code, unzip it and run the tests
@@ -39,7 +36,9 @@ async function main() {
 			extensionTestsPath,
 			launchArgs,
 			// Add version specification for better compatibility
-			version: 'stable'
+			version: 'stable',
+			// Add timeout for CI environments
+			...(isCI && { timeout: 300000 }) // 5 minutes timeout for CI
 		});
 	} catch (err) {
 		console.error('Failed to run tests:', err);
