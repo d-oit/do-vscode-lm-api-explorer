@@ -11,10 +11,23 @@ async function main() {
 		// Passed to --extensionTestsPath
 		const extensionTestsPath = path.resolve(__dirname, './index'); // Assuming index.ts will load all test files
 
+		console.log('Extension development path:', extensionDevelopmentPath);
+		console.log('Extension tests path:', extensionTestsPath);
+
 		// Download VS Code, unzip it and run the tests
-		await runTests({ extensionDevelopmentPath, extensionTestsPath });
+		await runTests({ 
+			extensionDevelopmentPath, 
+			extensionTestsPath,
+			// Run VS Code in headless mode for CI environments
+			launchArgs: [
+				'--headless',
+				'--disable-gpu',
+				'--disable-dev-shm-usage',
+				'--no-sandbox'
+			]
+		});
 	} catch (err) {
-		console.error('Failed to run tests');
+		console.error('Failed to run tests:', err);
 		process.exit(1);
 	}
 }
