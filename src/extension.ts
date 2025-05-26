@@ -19,7 +19,15 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log(UI_TEXT.ACTIVATION_MESSAGE);
 
 	const logger = vscode.window.createOutputChannel('d.o.vscode-lm Explorer Log');
-	context.subscriptions.push(logger); // Ensure logger is disposed on deactivate
+	
+	// Add logger to disposables first to ensure it's cleaned up
+	// Guard against disposed context in test environment
+	try {
+		context.subscriptions.push(logger);
+	} catch (error) {
+		// In test environment, context might already be disposed
+		console.log('Warning: Could not add logger to context subscriptions (test environment):', error);
+	}
 
 	const disposable = vscode.commands.registerCommand(COMMANDS.DISCOVER_MODELS, async () => {
 		const start = Date.now();
@@ -199,19 +207,26 @@ export function activate(context: vscode.ExtensionContext) {
 				} finally {
 					const elapsed = Date.now() - start;
 					logger.appendLine(`[${new Date().toISOString()}] AI Model Discovery completed in ${elapsed}ms.`);
-					// The logger is now disposed via context.subscriptions.push(logger)
-					// logger.dispose(); // No longer needed here
+					// Logger disposal is handled by context.subscriptions
 				}
 			});
 
 		} catch (err: any) {
 			logger.appendLine(`[${new Date().toISOString()}] Unexpected error: ${String(err)}`);
 			vscode.window.showErrorMessage('Unexpected error: ' + (err?.message || String(err)));
-			logger.dispose();
+			// Logger disposal is handled by context.subscriptions
 		}
 	});
 
-	context.subscriptions.push(disposable);
+	// Guard against disposed context in test environment
+	try {
+		context.subscriptions.push(disposable);
+	} catch (error) {
+		// In test environment, context might already be disposed
+		console.log('Warning: Could not add disposable to context subscriptions (test environment):', error);
+		// Manually dispose the disposable to prevent leaks
+		disposable.dispose();
+	}
 
 	const clearCacheDisposable = vscode.commands.registerCommand(COMMANDS.CLEAR_CACHE_AND_DISCOVER, async () => {
 		const modelService = new ModelService(logger); // Reuse the main logger
@@ -219,8 +234,20 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage(UI_TEXT.NOTIFICATIONS.CACHE_CLEARED);
 		await vscode.commands.executeCommand(COMMANDS.DISCOVER_MODELS);
 	});
-	context.subscriptions.push(clearCacheDisposable);
+	
+	// Guard against disposed context in test environment
+	try {
+		context.subscriptions.push(clearCacheDisposable);
+	} catch (error) {
+		// In test environment, context might already be disposed
+		console.log('Warning: Could not add clearCacheDisposable to context subscriptions (test environment):', error);
+		// Manually dispose the disposable to prevent leaks
+		clearCacheDisposable.dispose();
+	}
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+	// Cleanup is handled automatically by context.subscriptions
+	console.log('d.o. vscode-lm Explorer extension deactivated');
+}

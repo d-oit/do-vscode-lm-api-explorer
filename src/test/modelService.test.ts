@@ -56,14 +56,23 @@ const createMockModel = (
 
 suite('ModelService Unit Tests', () => {
 	let modelService: ModelService;
-		setup(() => {
+	setup(() => {
 		modelService = new ModelService(mockOutputChannel);
 		// Clear any cached data before each test
 		modelService.clearCache();
 	});
 	
 	teardown(() => {
-		mockOutputChannel.dispose();
+		// Safe cleanup - clear cache and attempt disposal
+		try {
+			modelService.clearCache();
+			if (mockOutputChannel && typeof mockOutputChannel.dispose === 'function') {
+				mockOutputChannel.dispose();
+			}
+		} catch (error) {
+			// Ignore disposal errors in tests
+			console.log('Test cleanup error (ignored):', error);
+		}
 	});
 
 	test('should create ModelService instance', () => {
@@ -92,7 +101,6 @@ suite('ModelService Unit Tests', () => {
 			const summary = modelService.buildModelSummary([]);
 			assert.strictEqual(Object.keys(summary).length, 0);
 		});
-
 		test('should handle cancellation during summary building', () => {
 			const mockModels = [createMockModel('test-model', 'Test Model')];
 			const mockCancellationToken = {

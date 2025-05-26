@@ -245,14 +245,21 @@ suite('LM Explorer Integration Tests', () => {
 	suite('ModelService Integration', () => {
 		let outputChannel: vscode.OutputChannel;
 		let modelService: ModelService;
-
 		setup(() => {
 			outputChannel = vscode.window.createOutputChannel('Test Integration');
 			modelService = new ModelService(outputChannel);
 		});
 
 		teardown(() => {
-			outputChannel.dispose();
+			// Safe disposal with error handling
+			try {
+				if (outputChannel) {
+					outputChannel.dispose();
+				}
+			} catch (error) {
+				// Ignore disposal errors in test environment
+				console.log('Integration test cleanup: disposal error (ignored):', error);
+			}
 		});
 
 		test('ModelService can fetch models from VS Code API', async function() {

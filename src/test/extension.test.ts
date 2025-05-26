@@ -98,7 +98,15 @@ suite('Extension Test Suite', () => {
 		});
 
 		teardown(() => {
-			outputChannel.dispose();
+			// Safely dispose the output channel
+			try {
+				if (outputChannel) {
+					outputChannel.dispose();
+				}
+			} catch (error) {
+				// Ignore disposal errors in tests - may already be disposed
+				console.log('Test cleanup: output channel disposal error (ignored):', error);
+			}
 		});
 
 		test('buildModelSummary should create correct summary structure', () => {
@@ -121,11 +129,16 @@ suite('Extension Test Suite', () => {
 
 		test('buildModelSummary should handle cancellation', () => {
 			const cancellationTokenSource = new vscode.CancellationTokenSource();
-			cancellationTokenSource.cancel();
-			
-			assert.throws(() => {
-				modelService.buildModelSummary(mockModels, cancellationTokenSource.token);
-			}, vscode.CancellationError);
+			try {
+				cancellationTokenSource.cancel();
+				
+				assert.throws(() => {
+					modelService.buildModelSummary(mockModels, cancellationTokenSource.token);
+				}, vscode.CancellationError);
+			} finally {
+				// Properly dispose the cancellation token source
+				cancellationTokenSource.dispose();
+			}
 		});
 	});
 
