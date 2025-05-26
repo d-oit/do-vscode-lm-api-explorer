@@ -3,14 +3,14 @@
 This file contains the recommended branch protection rules for this repository.
 Apply these settings in GitHub repository settings > Branches.
 
-## Master Branch Protection Rules
+## Main Branch Protection Rules
 
 ### Required Status Checks
 - ✅ **Require status checks to pass before merging**
 - ✅ **Require branches to be up to date before merging**
 - Required status checks:
   - `test` (from release.yml)
-  - `validate-pr` (from master-protection.yml)
+  - `validate-pr` (from main-protection.yml)
 
 ### Pull Request Requirements
 - ✅ **Require a pull request before merging**

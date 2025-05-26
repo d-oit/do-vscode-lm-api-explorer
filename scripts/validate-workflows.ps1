@@ -44,7 +44,7 @@ $expectedWorkflows = @(
     "ci.yml",
     "dev.yml", 
     "release.yml",
-    "master-protection.yml"
+    "main-protection.yml"
 )
 
 # Check each workflow file

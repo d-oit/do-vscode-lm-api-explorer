@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - master # Only trigger releases on master branch pushes
+      - main # Only trigger releases on main branch pushes
 
 jobs:
   test:
