@@ -1,0 +1,48 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*' # Trigger on tags like v1.0.0, v1.0.0-beta.1 etc.
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for git tag
+
+      - name: Get tag name
+        id: get_tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        id: create_github_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.TAG }}
+          name: Release ${{ steps.get_tag.outputs.TAG }}
+          body: |
+            # Release Notes for ${{ steps.get_tag.outputs.TAG }}
+
+            ## Changes:
+            # Add your release description here.
+            # You can fetch commit messages between the last tag and this tag to auto-generate notes if desired.
+            # Example: git log --pretty=format:"- %s" ${{ github.event.repository.releases[0].tag_name }}..${{ steps.get_tag.outputs.TAG }}
+
+            ## Features:
+            - List new features here
+
+            ## Bug Fixes:
+            - List bug fixes here
+
+            ## Breaking Changes:
+            - List breaking changes here (if any)
+
+          draft: false # Set to true to create a draft release
+          prerelease: ${{ contains(steps.get_tag.outputs.TAG, '-') }} # Set to true for pre-releases (tags with hyphens)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
