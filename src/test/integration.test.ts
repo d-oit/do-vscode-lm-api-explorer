@@ -17,7 +17,7 @@ suite('LM Explorer Integration Tests', () => {
 		// Let's just verify the test environment is set up correctly
 		console.log('Setting up integration test environment');
 				// Try to find the extension, but don't fail if not found in test environment
-		extension = vscode.extensions.getExtension('d.o.it.do-vscode-lm-explorer');
+		extension = vscode.extensions.getExtension('doit.do-vscode-lm-explorer');
 		if (extension && !extension.isActive) {
 			try {
 				await extension.activate();

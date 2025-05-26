@@ -49,13 +49,13 @@ suite('Extension Test Suite', () => {
 
 	suite('LM Model Explorer Extension', () => {
 		test('Extension should be present', () => {
-			const extension = vscode.extensions.getExtension('d.o.it.do-vscode-lm-explorer');
+			const extension = vscode.extensions.getExtension('doit.do-vscode-lm-explorer');
 			assert.ok(extension, 'Extension should be found with publisher.name format');
 		});
 
 		test('Command is registered', async () => {
 			// Ensure extension is activated first
-			const extension = vscode.extensions.getExtension('d.o.it.do-vscode-lm-explorer');
+			const extension = vscode.extensions.getExtension('doit.do-vscode-lm-explorer');
 			if (extension && !extension.isActive) {
 				try {
 					await extension.activate();
