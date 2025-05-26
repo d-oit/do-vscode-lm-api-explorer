@@ -1,4 +1,4 @@
-# d.o. vscode-lm Explorer
+# d.o.vscode-lm Explorer
 
 A **comprehensive VS Code extension** designed for developers to **explore, test, and understand** all available **Language Model (LM) API models** directly within their development environment. This powerful tool features a modern, modular architecture, an intuitive UI, complete API documentation, and robust error handling, making AI model integration seamless.
 
