@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { ExtendedLanguageModelChat, ModelSummary, SendResult, ModelNotSupportedError } from './types';
+import { UI_TEXT, ERROR_MESSAGES, PROGRESS_STEPS } from './constants';
+import { ModelTestingProgressReporter } from './progressReporter';
 
 export class ModelService {
 	private logger: vscode.OutputChannel;
@@ -53,9 +55,8 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 		if (cancellationToken?.isCancellationRequested) {
 			throw new vscode.CancellationError();
 		}
-
 		if (!models || models.length === 0) {
-			throw new Error('No language models available. Please ensure GitHub Copilot Chat or another provider is enabled.');
+			throw new Error(ERROR_MESSAGES.NO_MODELS);
 		}
 
 		this.logger.appendLine(`[${new Date().toISOString()}] Successfully fetched ${models.length} models`);
@@ -107,7 +108,8 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 			return this._cachedSendResults;
 		}
 
-		const totalModels = models.length;
+		// Create a progress reporter for more precise tracking
+		const progressReporter = new ModelTestingProgressReporter(models.length, progress);
 		
 		for (let i = 0; i < models.length; i++) {
 			if (cancellationToken?.isCancellationRequested) {
@@ -115,16 +117,12 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 			}
 
 			const model = models[i];
-			const progressMessage = `Testing ${model.name} (${i + 1}/${totalModels})...`;
-			progress.report({ 
-				message: progressMessage,
-				increment: (100 / totalModels)
-			});
+			progressReporter.reportModelStart(i, model.name);
 
 			try {
 				this.logger.appendLine(`[${new Date().toISOString()}] Testing model: ${model.id}`);
-						const testOptions: vscode.LanguageModelChatRequestOptions = {
-					justification: 'Testing model capabilities for VS Code LM Explorer extension'
+				const testOptions: vscode.LanguageModelChatRequestOptions = {
+					justification: UI_TEXT.TEST.JUSTIFICATION
 					// Note: Using model defaults (no explicit modelOptions)
 				};
 
@@ -133,7 +131,7 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 
 				try {
 					resp = await model.sendRequest(
-						[vscode.LanguageModelChatMessage.User('Hello! Please respond with a brief greeting.')], 
+						[vscode.LanguageModelChatMessage.User(UI_TEXT.TEST.MESSAGE)], 
 						testOptions,
 						cancellationToken
 					);
@@ -151,7 +149,7 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 					}
 					this.logger.appendLine(`[${new Date().toISOString()}] Error sending request to model ${model.id}: ${String(err)}`);
 					
-					if (err.message?.includes('model_not_supported') || err.message?.includes('Model is not supported')) {
+					if (err.message?.includes(ERROR_MESSAGES.MODEL_NOT_SUPPORTED) || err.message?.includes('Model is not supported')) {
 						throw new ModelNotSupportedError(model.id, err.message);
 					} else {
 						throw err;
@@ -178,13 +176,14 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 				sendResults[model.id] = {
 					request: {
 						model: model.id,
-						messages: [{ role: 'user', content: 'Hello! Please respond with a brief greeting.' }],
+						messages: [{ role: 'user', content: UI_TEXT.TEST.MESSAGE }],
 						options: testOptions
 					},
 					response: text,
 					errorDetails
 				};
 
+				progressReporter.reportModelCompletion(i, model.name);
 				this.logger.appendLine(`[${new Date().toISOString()}] Model ${model.id} tested successfully`);
 			} catch (err) {
 				if (err instanceof vscode.CancellationError) {
@@ -192,6 +191,7 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 				}
 				
 				sendResults[model.id] = { error: String(err) };
+				progressReporter.reportModelError(i, model.name, String(err));
 				this.logger.appendLine(`[${new Date().toISOString()}] Error testing model ${model.id}: ${String(err)}`);
 			}
 		}

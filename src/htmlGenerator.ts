@@ -1,54 +1,11 @@
 import { ExtendedLanguageModelChat, ModelExplorerData } from './types';
+import { 
+	LANGUAGE_MODEL_CHAT_REQUEST_OPTIONS, 
+	MODEL_OPTIONS, 
+	HTML_CONTENT 
+} from './constants';
 
 export class HtmlGenerator {
-	// Static, immutable parameters for LanguageModelChatRequestOptions
-	private static readonly LANGUAGE_MODEL_CHAT_REQUEST_OPTIONS = [
-		{
-			key: 'justification',
-			type: 'string',
-			description: 'A human-readable string explaining the reason for accessing the language model. Used for user consent and auditing.',
-			example: '"Analyzing code for security vulnerabilities"',
-			required: false
-		},
-		{
-			key: 'modelOptions',
-			type: 'Record<string, any>',
-			description: 'Model-specific options that control behavior. These vary by provider and model.',
-			example: '{ "temperature": 0.7, "max_tokens": 1000, "top_p": 0.9 }',
-			required: false,
-			subOptions: [
-				{ key: 'temperature', type: 'number', description: 'Controls randomness (0.0-2.0). Lower = more deterministic', example: '0.7' },
-				{ key: 'max_tokens', type: 'number', description: 'Maximum tokens in response', example: '1000' },
-				{ key: 'top_p', type: 'number', description: 'Nucleus sampling parameter (0.0-1.0)', example: '0.9' },
-				{ key: 'frequency_penalty', type: 'number', description: 'Reduces repetition (-2.0 to 2.0)', example: '0.0' },
-				{ key: 'presence_penalty', type: 'number', description: 'Encourages new topics (-2.0 to 2.0)', example: '0.0' },
-				{ key: 'stop', type: 'string | string[]', description: 'Stop sequences for generation', example: '["\\n", "END"]' }
-			]
-		},
-		{
-			key: 'tools',
-			type: 'LanguageModelChatTool[]',
-			description: 'Array of tools/functions the model can call during the conversation.',
-			example: '[{ name: "search", description: "Search the web" }]',
-			required: false
-		},
-		{
-			key: 'toolMode',
-			type: 'LanguageModelChatToolMode',
-			description: 'How the model should use tools. Values: Auto (default), Required, or None.',
-			example: 'LanguageModelChatToolMode.Auto',
-			required: false
-		}
-	] as const;
-
-	private static readonly SUB_OPTIONS = [
-		{ key: 'temperature', type: 'number', description: 'Controls randomness (0.0-2.0). Lower = more deterministic', example: '0.7' },
-		{ key: 'max_tokens', type: 'number', description: 'Maximum tokens in response', example: '1000' },
-		{ key: 'top_p', type: 'number', description: 'Nucleus sampling parameter (0.0-1.0)', example: '0.9' },
-		{ key: 'frequency_penalty', type: 'number', description: 'Reduces repetition (-2.0 to 2.0)', example: '0.0' },
-		{ key: 'presence_penalty', type: 'number', description: 'Encourages new topics (-2.0 to 2.0)', example: '0.0' },
-		{ key: 'stop', type: 'string | string[]', description: 'Stop sequences for generation', example: '["\\n", "END"]' }
-	];
 
 	static generateHtml(data: ModelExplorerData): string {
 		return `
@@ -303,33 +260,30 @@ export class HtmlGenerator {
 			}
 		`;
 	}
-
 	private static generateHeader(): string {
 		return `
 			<div style="text-align: center; margin-bottom: 2em;">
-				<h1>🚀 VS Code Language Model Explorer</h1>
+				<h1>${HTML_CONTENT.HEADER.TITLE}</h1>
 				<p style="font-size: 1.1em; color: var(--vscode-descriptionForeground);">
-					Explore available language models and their capabilities in VS Code
+					${HTML_CONTENT.HEADER.SUBTITLE}
 				</p>
 			</div>
 		`;
 	}
-
 	private static generateModelsSection(models: ExtendedLanguageModelChat[], sendResults: any): string {
 		return `
-			<h1>📋 Available Models</h1>
+			<h1>${HTML_CONTENT.SECTIONS.MODELS}</h1>
 			${models.map(model => this.generateModelCard(model, sendResults)).join('')}
 		`;
-	}
-	private static generateModelCard(model: ExtendedLanguageModelChat, sendResults: any): string {
+	}	private static generateModelCard(model: ExtendedLanguageModelChat, sendResults: any): string {
 		const error = sendResults && sendResults[model.id]?.error;
 		const is400 = error && error.includes('Request Failed: 400');
 		const isModelNotSupported = error && (error.includes('model_not_supported') || error.includes('Model is not supported'));
 		const errorDetails = sendResults && sendResults[model.id]?.errorDetails;
 		const response = sendResults && sendResults[model.id]?.response;
 		const requestOptions = sendResults && sendResults[model.id]?.request?.options;
-		const notSupportedIcon = '❌';
-		const supportedIcon = '✅';
+		const notSupportedIcon = HTML_CONTENT.BADGES.NOT_SUPPORTED;
+		const supportedIcon = HTML_CONTENT.BADGES.SUPPORTED;
 		
 		return `
 			<div class="accordion">
@@ -358,7 +312,7 @@ export class HtmlGenerator {
 						<tr><td>Vendor</td><td>${this.escapeHtml(model.vendor)}</td></tr>
 						<tr><td>Family</td><td>${this.escapeHtml(model.family)}</td></tr>
 						<tr><td>Version</td><td>${this.escapeHtml(model.version)}</td></tr>
-						<tr><td>Max Input Tokens</td><td>${model.maxInputTokens?.toLocaleString() || 'Unknown'}</td></tr>
+						<tr><td>Max Input Tokens</td><td>${model.maxInputTokens && model.maxInputTokens > 0 ? model.maxInputTokens.toLocaleString() : 'Unknown'}</td></tr>
 						${model.capabilities ? `<tr><td>Capabilities</td><td><div class="json-cell">${this.escapeHtml(JSON.stringify(model.capabilities, null, 2))}</div></td></tr>` : ''}
 						${requestOptions ? `<tr><td>Request Options Used</td><td><div class="json-cell">${this.escapeHtml(JSON.stringify(requestOptions, null, 2))}</div></td></tr>` : ''}
 						${response ? `<tr><td>Test Response</td><td><div class="json-cell">${this.escapeHtml(response)}</div></td></tr>` : ''}
@@ -367,10 +321,9 @@ export class HtmlGenerator {
 				</div>
 			</div>
 		`;
-	}
-	private static generateRequestOptionsSection(): string {
+	}	private static generateRequestOptionsSection(): string {
 		return `
-			<h1>⚙️ Language Model Chat Request Options</h1>
+			<h1>${HTML_CONTENT.SECTIONS.REQUEST_OPTIONS}</h1>
 			<p>Complete interface documentation for <code>LanguageModelChatRequestOptions</code>. This extension uses model defaults for better compatibility.</p>
 			
 			<table class="param-table">
@@ -381,7 +334,7 @@ export class HtmlGenerator {
 					<th>Example</th>
 					<th>Required</th>
 				</tr>
-				${this.LANGUAGE_MODEL_CHAT_REQUEST_OPTIONS.map(param => `
+				${LANGUAGE_MODEL_CHAT_REQUEST_OPTIONS.map(param => `
 					<tr>
 						<td><strong>${param.key}</strong></td>
 						<td><code>${param.type}</code></td>						<td>
@@ -389,7 +342,7 @@ export class HtmlGenerator {
 							${param.key === 'modelOptions' ? `
 								<div class="sub-options">
 									<strong>Common modelOptions (when specified):</strong><br>
-									${this.SUB_OPTIONS.map(sub => 
+									${MODEL_OPTIONS.map(sub => 
 										`• <code>${sub.key}</code> (${sub.type}): ${sub.description}<br>`
 									).join('')}
 									<em>Note: This extension uses model defaults (no explicit modelOptions) to ensure optimal compatibility across different providers.</em>
@@ -398,9 +351,9 @@ export class HtmlGenerator {
 						</td>
 						<td><div class="code-block">${param.example}</div></td>
 						<td>
-							${param.required ? 
-								'<span class="required-badge">REQUIRED</span>' : 
-								'<span class="optional-badge">OPTIONAL</span>'
+							${param.required ?
+								`<span class="required-badge">${HTML_CONTENT.BADGES.REQUIRED}</span>` : 
+								`<span class="optional-badge">${HTML_CONTENT.BADGES.OPTIONAL}</span>`
 							}
 						</td>
 					</tr>
@@ -408,10 +361,9 @@ export class HtmlGenerator {
 			</table>
 		`;
 	}
-
 	private static generateJsonSection(data: ModelExplorerData): string {
 		return `
-			<h1>📄 JSON Data Export</h1>
+			<h1>${HTML_CONTENT.SECTIONS.JSON_EXPORT}</h1>
 			
 			<div class="accordion">
 				<div class="accordion-header"
@@ -436,7 +388,7 @@ export class HtmlGenerator {
 									<path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
 									<path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
 								</svg>
-								Copy
+								${HTML_CONTENT.BUTTONS.COPY}
 							</button>
 						</div>
 						<pre id="modelJson">${this.escapeHtml(JSON.stringify(data.modelJson, null, 2))}</pre>
@@ -467,7 +419,7 @@ export class HtmlGenerator {
 									<path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
 									<path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
 								</svg>
-								Copy
+								${HTML_CONTENT.BUTTONS.COPY}
 							</button>
 						</div>
 						<pre id="sendResults">${this.escapeHtml(JSON.stringify(data.sendResults, null, 2))}</pre>
@@ -480,7 +432,6 @@ export class HtmlGenerator {
 	private static generateToast(): string {
 		return '<div id="toast" class="success-toast"></div>';
 	}
-
 	private static generateScripts(): string {
 		return `
 			<script>
@@ -501,7 +452,7 @@ export class HtmlGenerator {
 					
 					if (navigator.clipboard && window.isSecureContext) {
 						navigator.clipboard.writeText(text).then(() => {
-							showToast('Copied to clipboard!');
+							showToast('${HTML_CONTENT.TOAST_MESSAGES.COPIED}');
 						}).catch(err => {
 							console.error('Failed to copy: ', err);
 							fallbackCopyTextToClipboard(text);
@@ -526,13 +477,13 @@ export class HtmlGenerator {
 					try {
 						const successful = document.execCommand('copy');
 						if (successful) {
-							showToast('Copied to clipboard!');
+							showToast('${HTML_CONTENT.TOAST_MESSAGES.COPIED}');
 						} else {
-							showToast('Copy failed');
+							showToast('${HTML_CONTENT.TOAST_MESSAGES.COPY_FAILED}');
 						}
 					} catch (err) {
 						console.error('Fallback: Oops, unable to copy', err);
-						showToast('Copy failed');
+						showToast('${HTML_CONTENT.TOAST_MESSAGES.COPY_FAILED}');
 					}
 					
 					document.body.removeChild(textArea);

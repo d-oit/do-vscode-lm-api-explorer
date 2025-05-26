@@ -4,31 +4,39 @@ import * as vscode from 'vscode';
 import { ModelService } from './modelService';
 import { HtmlGenerator } from './htmlGenerator';
 import { ModelExplorerData, ModelNotSupportedError } from './types';
+import { ProgressReporter } from './progressReporter';
+import { 
+	COMMANDS, 
+	UI_TEXT, 
+	PROGRESS_STEPS, 
+	URLS 
+} from './constants';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	console.log('Congratulations, your extension "do-vscode-lm-explorer" is now active!');
+	console.log(UI_TEXT.ACTIVATION_MESSAGE);
 
 	const logger = vscode.window.createOutputChannel('d.o.vscode-lm Explorer Log');
 	context.subscriptions.push(logger); // Ensure logger is disposed on deactivate
 
-	const disposable = vscode.commands.registerCommand('do-vscode-lm-explorer.discoverModels', async () => {
+	const disposable = vscode.commands.registerCommand(COMMANDS.DISCOVER_MODELS, async () => {
 		const start = Date.now();
 		logger.appendLine(`[${new Date().toISOString()}] AI Model Discovery started.`);
 		
 		try {
 			// Show progress with cancellation support
 			await vscode.window.withProgress({
-				title: 'Discovering & Testing AI Models...',
+				title: UI_TEXT.PROGRESS.TITLE,
 				location: vscode.ProgressLocation.Notification,
 				cancellable: true
 			}, async (progress, cancellationToken) => {
 				const modelService = new ModelService(logger);
+				const progressReporter = new ProgressReporter(progress);
 				
 				try {
 					// Step 1: Fetch models
-					progress.report({ message: 'Discovering available AI models...', increment: 10 });
+					progressReporter.reportStep(UI_TEXT.PROGRESS.DISCOVERING, PROGRESS_STEPS.FETCH_MODELS.increment);
 					const models = await modelService.fetchModels(cancellationToken);
 					
 					if (cancellationToken.isCancellationRequested) {
@@ -37,7 +45,7 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 
 					// Step 2: Build model summary
-					progress.report({ message: 'Analyzing model capabilities...', increment: 20 });
+					progressReporter.reportStep(UI_TEXT.PROGRESS.ANALYZING, PROGRESS_STEPS.ANALYZE_CAPABILITIES.increment);
 					const modelJson = modelService.buildModelSummary(models, cancellationToken);
 					
 					if (cancellationToken.isCancellationRequested) {
@@ -45,9 +53,9 @@ export function activate(context: vscode.ExtensionContext) {
 						return;
 					}
 
-					// Step 3: Test models
-					progress.report({ message: 'Testing AI model responses...', increment: 30 });
-					const sendResults = await modelService.testModels(models, progress, cancellationToken);
+					// Step 3: Test models (most time-consuming step)
+					progressReporter.reportStep(UI_TEXT.PROGRESS.TESTING, PROGRESS_STEPS.TEST_MODELS.increment);
+					const sendResults = await modelService.testModels(models, progressReporter.getVSCodeProgress(), cancellationToken);
 					
 					if (cancellationToken.isCancellationRequested) {
 						logger.appendLine(`[${new Date().toISOString()}] Operation cancelled by user`);
@@ -55,7 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 
 					// Step 4: Generate and show results
-					progress.report({ message: 'Preparing AI model explorer...', increment: 90 });
+					progressReporter.reportStep(UI_TEXT.PROGRESS.PREPARING, PROGRESS_STEPS.PREPARE_RESULTS.increment);
 					
 					const explorerData: ModelExplorerData = {
 						models,
@@ -66,8 +74,8 @@ export function activate(context: vscode.ExtensionContext) {
 					const html = HtmlGenerator.generateHtml(explorerData);
 					
 					const panel = vscode.window.createWebviewPanel(
-						'lmModelExplorer',
-						'AI Model Explorer',
+						UI_TEXT.WEBVIEW.VIEW_TYPE,
+						UI_TEXT.WEBVIEW.TITLE,
 						vscode.ViewColumn.One,
 						{ 
 							enableFindWidget: true, 
@@ -78,15 +86,18 @@ export function activate(context: vscode.ExtensionContext) {
 					
 					panel.webview.html = html;
 					
-					progress.report({ message: 'AI Model Discovery Complete!', increment: 100 });
+					progress.report({ 
+						message: UI_TEXT.PROGRESS.COMPLETE, 
+						increment: 100 
+					});
 					logger.appendLine(`[${new Date().toISOString()}] Successfully discovered ${models.length} AI models`);
 					
 					// Show a helpful notification
 					vscode.window.showInformationMessage(
-						`🤖 Discovered ${models.length} AI models! Use the explorer to copy API parameters and test responses.`,
-						'Open Explorer'
+						UI_TEXT.NOTIFICATIONS.SUCCESS(models.length),
+						UI_TEXT.BUTTONS.OPEN_EXPLORER
 					).then(selection => {
-						if (selection === 'Open Explorer') {
+						if (selection === UI_TEXT.BUTTONS.OPEN_EXPLORER) {
 							panel.reveal();
 						}
 					});
@@ -94,7 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
 				} catch (err: any) {
 					if (err instanceof vscode.CancellationError) {
 						logger.appendLine(`[${new Date().toISOString()}] AI model discovery was cancelled`);
-						vscode.window.showInformationMessage('AI model discovery was cancelled.');
+						vscode.window.showInformationMessage(UI_TEXT.NOTIFICATIONS.CANCELLED);
 						return;
 					}
 					
@@ -102,19 +113,19 @@ export function activate(context: vscode.ExtensionContext) {
 					
 					if (err.message?.includes('No language models available')) {
 						vscode.window.showWarningMessage(
-							'No AI models found. Please ensure GitHub Copilot Chat or another AI provider is enabled.',
-							'Setup Guide'
+							UI_TEXT.NOTIFICATIONS.NO_MODELS,
+							UI_TEXT.BUTTONS.SETUP_GUIDE
 						).then(selection => {
-							if (selection === 'Setup Guide') {
-								vscode.env.openExternal(vscode.Uri.parse('https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide'));
+							if (selection === UI_TEXT.BUTTONS.SETUP_GUIDE) {
+								vscode.env.openExternal(vscode.Uri.parse(URLS.COPILOT_SETUP_GUIDE));
 							}
 						});
 					} else if (err instanceof ModelNotSupportedError) {
 						vscode.window.showWarningMessage(
-							`AI Model Explorer: Model "${err.message}" is not supported for chat requests. Please check your AI provider setup.`
+							UI_TEXT.NOTIFICATIONS.MODEL_NOT_SUPPORTED(err.message)
 						);
 					} else {
-						vscode.window.showErrorMessage(`Failed to discover AI models: ${err?.message || String(err)}`);
+						vscode.window.showErrorMessage(UI_TEXT.NOTIFICATIONS.ERROR(err?.message || String(err)));
 					}
 				} finally {
 					const elapsed = Date.now() - start;
@@ -133,11 +144,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(disposable);
 
-	const clearCacheDisposable = vscode.commands.registerCommand('do-vscode-lm-explorer.clearCacheAndDiscover', async () => {
+	const clearCacheDisposable = vscode.commands.registerCommand(COMMANDS.CLEAR_CACHE_AND_DISCOVER, async () => {
 		const modelService = new ModelService(logger); // Reuse the main logger
 		modelService.clearCache();
-		vscode.window.showInformationMessage('AI Model Explorer cache cleared. Rediscovering models...');
-		await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
+		vscode.window.showInformationMessage(UI_TEXT.NOTIFICATIONS.CACHE_CLEARED);
+		await vscode.commands.executeCommand(COMMANDS.DISCOVER_MODELS);
 	});
 	context.subscriptions.push(clearCacheDisposable);
 }
