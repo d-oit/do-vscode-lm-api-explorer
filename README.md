@@ -217,7 +217,7 @@ This project uses a **GitFlow-inspired branching strategy** with automated CI/CD
 
 #### 🌿 **Branch Strategy**
 - **`dev` branch**: All development work happens here
-- **`master` branch**: Release-only branch with automated publishing
+- **`main` branch**: Release-only branch with automated publishing
 - **Feature branches**: Created from and merged back into `dev`
 
 #### 🔄 **Release Process**
@@ -227,16 +227,16 @@ This project uses a **GitFlow-inspired branching strategy** with automated CI/CD
    npm run release:prepare
    # or for bash: npm run release:prepare:bash
    ```
-3. **Create PR**: From `dev` to `master` branch
-4. **Automated Release**: Upon merge to `master`:
+3. **Create PR**: From `dev` to `main` branch
+4. **Automated Release**: Upon merge to `main`:
    - Creates GitHub release with auto-generated notes
    - Publishes to VS Code Marketplace
    - Tags version automatically
 
 #### 🚀 **CI/CD Pipelines**
 - **Development CI**: Runs tests and creates build artifacts for `dev` branch
-- **Master Protection**: Validates PRs to `master` (version bump, tests, builds)
-- **Release Automation**: Publishes to GitHub and VS Code Marketplace on `master` push
+- **Main Protection**: Validates PRs to `main` (version bump, tests, builds)
+- **Release Automation**: Publishes to GitHub and VS Code Marketplace on `main` push
 
 ### Development Setup
 ```bash
@@ -297,3 +297,7 @@ For detailed CI/CD documentation, see [`.github/WORKFLOW_DOCUMENTATION.md`](.git
 - Basic model discovery and testing functionality
 - Simple HTML output with model information
 - GitHub Copilot integration setup
+
+## Disclaimer
+
+This project is provided "as is" without warranty of any kind. Use at your own risk. The authors are not responsible for any damage or loss caused by the use of this software.

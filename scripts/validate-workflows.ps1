@@ -44,7 +44,7 @@ $expectedWorkflows = @(
     "ci.yml",
     "dev.yml", 
     "release.yml",
-    "master-protection.yml"
+    "main-protection.yml"
 )
 
 # Check each workflow file
@@ -144,9 +144,8 @@ try {
         Write-Info "Current branch: $currentBranch"
         
         if ($currentBranch -eq "dev") {
-            Write-Success "On development branch (recommended for development)"
-        } elseif ($currentBranch -eq "master") {
-            Write-Warning "On master branch (use dev branch for development)"
+            Write-Success "On development branch (recommended for development)"        } elseif ($currentBranch -eq "main") {
+            Write-Warning "On main branch (use dev branch for development)"
         } else {
             Write-Info "On feature branch: $currentBranch"
         }

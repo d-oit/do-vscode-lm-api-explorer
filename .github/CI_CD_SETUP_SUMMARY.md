@@ -6,11 +6,11 @@
 - **`ci.yml`** - Basic CI for all branches (test, lint, build)
 - **`dev.yml`** - Development-focused pipeline with artifact creation
 - **`release.yml`** - Automated release to GitHub + VS Code Marketplace
-- **`master-protection.yml`** - Validates PRs to master branch
+- **`main-protection.yml`** - Validates PRs to main branch
 
 ### 🌿 Branch Strategy
 - **`dev`** - Development branch (all work happens here)
-- **`master`** - Release-only branch (triggers automated publishing)
+- **`main`** - Release-only branch (triggers automated publishing)
 
 ### 🛠️ Helper Scripts
 - **`scripts/prepare-release.ps1`** - Interactive version bumping (Windows)
@@ -51,7 +51,7 @@ npm run release:prepare
 # 3. Push changes
 git push origin dev
 
-# 4. Create PR from dev to master
+# 4. Create PR from dev to main
 # (GitHub UI or CLI)
 
 # 5. Merge PR - automatic release will trigger!
@@ -77,13 +77,13 @@ See `.github/BRANCH_PROTECTION_SETUP.md` for detailed configuration.
 - ✅ Creates development build
 - ✅ Uploads artifact for testing
 
-### PR to `master` branch:
+### PR to `main` branch:
 - ✅ Validates source is `dev` branch
 - ✅ Checks version was bumped
 - ✅ Runs full test suite
 - ✅ Validates build succeeds
 
-### Push to `master` branch:
+### Push to `main` branch:
 - ✅ Runs tests
 - ✅ Builds extension
 - ✅ Creates GitHub release
@@ -115,7 +115,7 @@ npm run workflows:validate      # Validate CI/CD setup
 - Verify version was bumped in package.json
 - Ensure all tests pass
 
-### Master Branch Rejected
+### Main Branch Rejected
 - Verify PR is from `dev` branch only
 - Check version has been incremented
 - Ensure CI checks pass
@@ -134,4 +134,4 @@ npm run workflows:validate      # Validate CI/CD setup
 
 ---
 
-🎉 **Your CI/CD pipeline is ready!** All development in `dev`, releases via `master`.
+🎉 **Your CI/CD pipeline is ready!** All development in `dev`, releases via `main`.

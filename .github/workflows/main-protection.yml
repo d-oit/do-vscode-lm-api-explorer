@@ -1,9 +1,9 @@
-name: Master Branch Protection
+name: Main Branch Protection
 
 on:
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   validate-pr:
@@ -17,7 +17,7 @@ jobs:
       - name: Check if PR is from dev branch
         run: |
           if [ "${{ github.head_ref }}" != "dev" ]; then
-            echo "❌ Pull requests to master branch must come from dev branch only"
+            echo "❌ Pull requests to main branch must come from dev branch only"
             echo "Current source branch: ${{ github.head_ref }}"
             exit 1
           else
@@ -70,9 +70,8 @@ jobs:
               console.log('invalid');
             }
           " 2>/dev/null || echo "valid")
-          
-          if [ "$COMPARISON" != "valid" ]; then
-            echo "❌ Version must be bumped before merging to master"
+            if [ "$COMPARISON" != "valid" ]; then
+            echo "❌ Version must be bumped before merging to main"
             echo "Current: $CURRENT_VERSION, Latest: $LATEST_TAG"
             exit 1
           else

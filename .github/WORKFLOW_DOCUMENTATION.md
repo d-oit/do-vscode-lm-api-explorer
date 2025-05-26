@@ -9,7 +9,7 @@ This repository uses a GitFlow-inspired branching strategy with automated CI/CD 
 - Feature branches should be created from and merged back into `dev`
 - Continuous integration runs on every push and pull request
 
-### Master Branch (`master`)
+### Main Branch (`main`)
 - **Release-only branch** - no direct development
 - Only accepts pull requests from the `dev` branch
 - Automatically triggers release process when code is pushed
@@ -18,7 +18,7 @@ This repository uses a GitFlow-inspired branching strategy with automated CI/CD 
 ## Workflow Files
 
 ### 1. `ci.yml` - General CI Pipeline
-- **Triggers**: Push/PR to `dev` or `master` branches
+- **Triggers**: Push/PR to `dev` or `main` branches
 - **Purpose**: Basic validation (lint, type-check, test, build)
 - **Actions**: 
   - Installs dependencies
@@ -35,9 +35,9 @@ This repository uses a GitFlow-inspired branching strategy with automated CI/CD 
   - Creates development build artifacts
   - Uploads `.vsix` file for testing (7-day retention)
 
-### 3. `master-protection.yml` - Master Branch Protection
-- **Triggers**: Pull requests to `master` branch
-- **Purpose**: Ensures master branch integrity
+### 3. `main-protection.yml` - Main Branch Protection
+- **Triggers**: Pull requests to `main` branch
+- **Purpose**: Ensures main branch integrity
 - **Validations**:
   - Verifies PR source is `dev` branch only
   - Runs comprehensive test suite
@@ -45,7 +45,7 @@ This repository uses a GitFlow-inspired branching strategy with automated CI/CD 
   - Ensures package builds successfully
 
 ### 4. `release.yml` - Release Pipeline
-- **Triggers**: Push to `master` branch
+- **Triggers**: Push to `main` branch
 - **Purpose**: Automated release to GitHub and VS Code Marketplace
 - **Actions**:
   - Runs full test suite
@@ -67,7 +67,7 @@ To enable marketplace publishing, add the following secret to your GitHub reposi
 ### Automated Release (Recommended)
 1. Develop features in `dev` branch
 2. Update version in `package.json` using semantic versioning
-3. Create PR from `dev` to `master`
+3. Create PR from `dev` to `main`
 4. After PR approval and merge, release is automatically triggered
 
 ### Manual Release Steps
@@ -75,7 +75,7 @@ If you need to make a manual release:
 1. Ensure you're on `dev` branch with latest changes
 2. Update version: `npm version patch|minor|major`
 3. Push changes: `git push origin dev`
-4. Create and merge PR to `master`
+4. Create and merge PR to `main`
 5. Release workflow will automatically trigger
 
 ## Version Management
@@ -91,14 +91,14 @@ Each workflow provides different validation levels:
 
 - ✅ **CI**: Basic validation for all branches
 - 🔧 **Dev**: Development builds and artifacts
-- 🛡️ **Master Protection**: Strict validation for release candidates
+- 🛡️ **Main Protection**: Strict validation for release candidates
 - 🚀 **Release**: Production deployment to GitHub and VS Code Marketplace
 
 ## Branch Protection Rules (Recommended)
 
 Configure these branch protection rules in GitHub:
 
-### `master` branch:
+### `main` branch:
 - Require status checks to pass before merging
 - Require branches to be up to date before merging
 - Require review from code owners
@@ -116,7 +116,7 @@ Configure these branch protection rules in GitHub:
 - Verify version has been bumped in package.json
 - Ensure all tests pass
 
-### Master Branch Rejected
+### Main Branch Rejected
 - Verify PR is from `dev` branch
 - Check that version has been incremented
 - Ensure all CI checks pass
