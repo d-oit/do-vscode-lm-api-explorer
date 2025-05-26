@@ -1,9 +1,7 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
 
 if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ]; then
   echo "Direct commits to the main branch are not allowed. Please use a pull request."
-  #exit 1
+  exit 1
 fi
 # Run tests on other branches if needed, or remove this line if tests should only run in CI
 npm test

@@ -4,6 +4,20 @@ All notable changes to the "do-vscode-lm-explorer" extension will be documented 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.3.1] - 2025-01-27 - First Run Permission Fix
+
+### Fixed
+- **First Run Error**: Fixed "No AI models found" error that occurred on the first run due to VS Code LM API permission requirements
+- **Permission Handling**: Added proper handling for `vscode.LanguageModelError.NoPermissions` errors with user-friendly messages
+- **User Experience**: Added "Try Again" functionality that re-executes the command after user grants permissions
+- **Error Messages**: Improved error messages to guide users through the permission grant process
+
+### Technical
+- Enhanced `ModelService.ts` with specific permission error detection and handling
+- Added permission-denied error handling in `extension.ts` with retry mechanism
+- Fixed test infrastructure issues (TDD/BDD syntax mixing, missing test runner file)
+- Ensured all tests pass with proper error handling coverage
+
 ## [0.3.0] - 2025-05-26 - Premium Request Warning & User Choice
 
 ### Added
