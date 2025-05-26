@@ -19,6 +19,7 @@ async function main() {
 		console.log('Running in CI environment:', isCI);
 		// Configure launch arguments based on environment
 		const launchArgs = isCI ? [
+			'--headless', // Add this flag for headless execution in CI
 			'--disable-gpu',
 			'--disable-dev-shm-usage',
 			'--no-sandbox',
