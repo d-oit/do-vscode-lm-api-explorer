@@ -57,6 +57,14 @@
     "test": "vscode-test",
     "prepare": "husky"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/d-oit/do-vscode-lm-api-explorer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/d-oit/do-vscode-lm-api-explorer/issues"
+  },
+  "homepage": "https://github.com/d-oit/do-vscode-lm-api-explorer",
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
