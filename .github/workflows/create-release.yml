@@ -5,6 +5,11 @@ on:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*' # Trigger on tags like v1.0.0, v1.0.0-beta.1 etc.
   workflow_dispatch: # Allows manual triggering
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v1.0.0)'
+        required: true
+        type: string
 
 permissions: # Added permissions
   contents: write
@@ -20,7 +25,33 @@ jobs:
 
       - name: Get tag name
         id: get_tag
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate tag name
+        run: |
+          TAG="${{ steps.get_tag.outputs.TAG }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+            echo "Error: Tag name '$TAG' does not match expected format (v*.*.* e.g., v1.0.0)"
+            exit 1
+          fi
+          echo "Valid tag name: $TAG"
+
+      - name: Create tag if manual trigger
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG="${{ steps.get_tag.outputs.TAG }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists"
+          else
+            echo "Creating tag $TAG"
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
 
       - name: Create GitHub Release
         id: create_github_release
@@ -29,12 +60,10 @@ jobs:
           tag_name: ${{ steps.get_tag.outputs.TAG }}
           name: Release ${{ steps.get_tag.outputs.TAG }}
           body: |
-            # Release Notes for ${{ steps.get_tag.outputs.TAG }}
-
-            ## Changes:
+            # Release Notes for ${{ steps.get_tag.outputs.TAG }}            ## Changes:
             # Add your release description here.
             # You can fetch commit messages between the last tag and this tag to auto-generate notes if desired.
-            # Example: git log --pretty=format:"- %s" ${{ github.event.repository.releases[0].tag_name }}..${{ steps.get_tag.outputs.TAG }}
+            # Example: Use git log to get commits between tags
 
             ## Features:
             - List new features here
