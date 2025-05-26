@@ -31,13 +31,13 @@ export interface SendResult {
 		messages: Array<{ role: string; content: string }>;
 		options: vscode.LanguageModelChatRequestOptions;
 	};
-	response?: string;
+	response?: string | undefined;
 	errorDetails?: {
 		message?: string;
 		code?: string;
 		cause?: any;
 	};
-	error?: string;
+	error?: string | undefined;
 }
 
 export interface ModelExplorerData {

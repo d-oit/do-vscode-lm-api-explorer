@@ -311,7 +311,7 @@ suite('Extension Test Suite', () => {
 				sendResults: {
 					'github-copilot-chat': {
 						testSkipped: true,
-						response: 'This should not appear',
+						response: undefined,
 						request: { 
 							model: 'github-copilot-chat', 
 							messages: [{ role: 'user', content: 'hello' }],
