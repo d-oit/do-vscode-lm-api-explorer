@@ -69,6 +69,10 @@ A **comprehensive VS Code extension** designed for developers to **explore, test
 
 ## 📸 Visuals
 
+<p align="center">
+  <img src="assets/gallery.png" alt="d.o. vscode-lm Explorer Gallery" style="max-width: 800px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+</p>
+
 <video src="assets/Recording d.o. vscode-lm Explorer.mp4" controls autoplay loop muted style="width: 100%; max-width: 800px; display: block; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
   Your browser does not support the video tag.
 </video>
@@ -92,14 +96,12 @@ A **comprehensive VS Code extension** designed for developers to **explore, test
 - **API Documentation**: Complete LanguageModelChatRequestOptions reference
 - **Model Details**: Expandable accordion sections with:
   - Model metadata and capabilities
-  - Live test results and response data (when testing is performed)
-  - Premium request status and explanations (when testing is skipped)
+  - Live test results and response data
   - Copy-to-clipboard functionality for easy integration
 
 ## 🎯 Use Cases
 
-**🔍 Discovery**: New to VS Code AI integration? Discover what models are available and working  
-**💰 Cost Management**: Want to avoid premium request charges? Use skip testing mode to explore models  
+**🔍 Discovery**: New to VS Code AI integration? Discover what models are available and working
 **🛠️ Development**: Building AI-powered extensions? Get exact API parameters and test responses  
 **🐛 Troubleshooting**: AI features not working? Test model compatibility and identify issues
 **📊 Comparison**: Multiple AI providers? Compare capabilities and responses side-by-side

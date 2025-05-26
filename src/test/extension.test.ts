@@ -268,18 +268,30 @@ suite('Extension Test Suite', () => {
 
 		test('generateHtml should handle testSkipped models correctly', () => {
 			const data = {
-				models: [mockModels[0]],
-				modelJson: { 'github-copilot-chat': { 
-					name: 'GitHub Copilot Chat',
-					id: 'github-copilot-chat',
-					vendor: 'copilot',
-					family: 'gpt-4',
-					version: '1.0',
-					maxInputTokens: 8192
-				}},
+				models: [
+					mockModels[0]
+				],
+				modelJson: {
+					'github-copilot-chat': {
+						name: 'GitHub Copilot Chat',
+						id: 'github-copilot-chat',
+						vendor: 'GitHub',
+						family: 'copilot',
+						version: '1.0',
+						maxInputTokens: 4096,
+					},
+				},
 				sendResults: {
 					'github-copilot-chat': {
-						testSkipped: true
+						status: 'skipped',
+						testSkipped: true,
+						request: {
+							model: 'github-copilot-chat',
+							messages: [],
+							options: {}
+						},
+						response: undefined,
+						error: undefined,
 					}
 				}
 			};

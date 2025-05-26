@@ -3,7 +3,7 @@
   "displayName": "d.o. vscode-lm Explorer",
   "publisher": "d.o.it",
   "description": "Comprehensive VS Code extension that explores and tests Language Model API models with modern accordion UI, complete API documentation, cancellation support, and modular architecture.",
-  "version": "0.3.0",
+  "version": "0.2.0",
   "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.90.0"
@@ -21,10 +21,7 @@
     "explorer",
     "testing",
     "documentation"
-  ],
-  "activationEvents": [
-    "onCommand:do-vscode-lm-explorer.discoverModels"
-  ],
+  ], 
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
