@@ -1,4 +1,4 @@
-# d.o.vscode-lm Explorer
+![gallery](https://github.com/user-attachments/assets/379dcf8c-dd7c-47b6-8bd0-9a025f5f3a17)
 
 A **comprehensive VS Code extension** designed for developers to **explore, test, and understand** all available **Language Model (LM) API models** directly within their development environment. This powerful tool features a modern, modular architecture, an intuitive UI, complete API documentation, and robust error handling, making AI model integration seamless.
 
@@ -69,13 +69,8 @@ A **comprehensive VS Code extension** designed for developers to **explore, test
 
 ## 📸 Visuals
 
-<p align="center">
-  <img src="assets/gallery.png" alt="d.o. vscode-lm Explorer Gallery" style="max-width: 800px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
-</p>
+https://github.com/user-attachments/assets/0e724a25-f20d-47e6-81f6-e00eff36e6fb
 
-<video src="assets/Recording d.o. vscode-lm Explorer.mp4" controls autoplay loop muted style="width: 100%; max-width: 800px; display: block; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-  Your browser does not support the video tag.
-</video>
 <p style="text-align: center; font-size: 0.9em; color: var(--vscode-descriptionForeground);">
   *(For best experience, view this video directly on GitHub or in a Markdown viewer that supports HTML video tags.)*
 </p>
