@@ -86,7 +86,7 @@ https://github.com/user-attachments/assets/0e724a25-f20d-47e6-81f6-e00eff36e6fb
 
 ### What You'll See
 
-- **Premium Request Dialog**: (After June 4, 2025) Choice between testing models or skipping to avoid premium usage
+- **Premium Request Dialog**: (After June 4, 2025) Choice between testing models or skipping to avoid premium usage.  [About premium request](https://docs.github.com/en/copilot/managing-copilot/monitoring-usage-and-entitlements/about-premium-requests)
 - **Model Overview Table**: All available models with status indicators (✅/❌/⏭️)
 - **API Documentation**: Complete LanguageModelChatRequestOptions reference
 - **Model Details**: Expandable accordion sections with:
