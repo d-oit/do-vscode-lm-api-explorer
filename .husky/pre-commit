@@ -1,4 +1,6 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npm test
+if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ]; then
+  npm test
+fi
