@@ -1,5 +1,6 @@
 name: Release
 
+# GitHub Actions workflow for automated testing and publishing
 on:
   workflow_dispatch:
 
