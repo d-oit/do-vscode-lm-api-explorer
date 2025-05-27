@@ -4,6 +4,47 @@ All notable changes to the "do-vscode-lm-explorer" extension will be documented 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.4.0] - 2025-05-27 - Enhanced CI/CD with changeset management
+
+### Added
+- Comprehensive changeset management system with Bash scripts
+- Auto-detection of change types from Git commits with keyword analysis
+- Interactive changeset creation with guided prompts and auto-generation options
+- Automated changelog generation from changesets with proper categorization
+- CI/CD integration with GitHub Actions for automated releases
+- Status reporting commands for changeset information and analysis
+- NPM scripts for complete changeset workflow management
+- GitHub release creation with VSIX file attachment and changelog integration
+
+### Changed
+- Enhanced release workflow with changelog extraction and error handling
+- Improved version management with automatic semantic versioning  
+- Updated documentation with comprehensive CI/CD integration guides
+- Migrated from PowerShell to Bash-only scripts for cross-platform compatibility
+- Added Git commit analysis to automatically detect change type (major, minor, patch)
+- Enhanced interactive changeset creation with auto option
+- Added keyword-based detection for breaking changes, features, fixes, and enhancements
+- Implemented auto-generation of changeset descriptions and changes from git history
+- Added scoring system to determine appropriate version bump based on commit patterns
+- Added new npm scripts for auto-release workflows
+- Improved user experience with confirmation prompts and detailed analysis output
+
+## [0.3.2] - 2025-05-27 - Added comprehensive changelog management system
+
+### Added
+- Created Bash scripts for changeset management
+- Added interactive changeset creation with guided prompts  
+- Implemented automatic changelog generation from changesets
+- Added version management with automatic bumping
+- Integrated with existing release workflow
+- Added comprehensive documentation and usage examples
+- Created npm scripts for easy access to changelog tools
+
+### Fixed
+- Fixed OAuth token refresh mechanism
+- Added better error handling for expired tokens
+- Improved user feedback for authentication failures
+
 ## [0.3.1] - 2025-01-27 - First Run Permission Fix
 
 ### Fixed
@@ -82,3 +123,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Simple HTML output with model information  
 - GitHub Copilot integration setup
 - Command registration for `Show all vscode-lm chat models`
+
+
+
+

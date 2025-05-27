@@ -1,68 +1,139 @@
-name: Release
-
+name: Release VSIX Extension
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Tag name for the release (e.g., v1.0.0)'
-        required: true
-        type: string
-
-permissions:
-  contents: write
-  packages: write
-
+      - 'v*'
 jobs:
-  test:
-    uses: ./.github/workflows/test.yml
-
   build-and-release:
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Need full history for changelog extraction
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Install vsce
-        run: npm install -g @vscode/vsce
+      - name: Run tests
+        run: npm test
 
-      - name: Build extension
-        run: npm run package
+      - name: Install VSCE
+        run: npm install -g vsce
 
-      - name: Package extension
+      - name: Build VSIX package
         run: vsce package
 
       - name: Get package version
         id: package-version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
+      - name: Extract release notes from changelog
+        id: changelog
+        run: |
+          # Extract the release notes for the current version from CHANGELOG.md
+          VERSION="${{ steps.package-version.outputs.version }}"
+          echo "Extracting release notes for version $VERSION"
+          
+          # Create a script to extract the changelog section
+          cat > extract_changelog.js << 'EOF'
+          const fs = require('fs');
+          const version = process.argv[2];
+          
+          try {
+            const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+            
+            // Look for the version section
+            const versionPattern = new RegExp(`## \\[${version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\].*?\\n`);
+            const match = changelog.match(versionPattern);
+            
+            if (match) {
+              const startIndex = changelog.indexOf(match[0]);
+              const afterVersionLine = startIndex + match[0].length;
+              
+              // Find the next version section or end of file
+              const nextVersionPattern = /\n## \[/;
+              const nextMatch = changelog.slice(afterVersionLine).match(nextVersionPattern);
+              
+              let endIndex;
+              if (nextMatch) {
+                endIndex = afterVersionLine + nextMatch.index;
+              } else {
+                endIndex = changelog.length;
+              }
+              
+              const releaseNotes = changelog.slice(afterVersionLine, endIndex).trim();
+              
+              // Clean up the release notes
+              const cleanedNotes = releaseNotes
+                .replace(/\n\n+/g, '\n\n')  // Remove excessive newlines
+                .replace(/^\n+/, '')        // Remove leading newlines
+                .replace(/\n+$/, '');       // Remove trailing newlines
+              
+              console.log(cleanedNotes);
+            } else {
+              console.log(`**Release v${version}**\n\nAutomatically created from tag v${version}.`);
+            }
+          } catch (error) {
+            console.log(`**Release v${version}**\n\nAutomatically created from tag v${version}.`);
+          }
+          EOF
+          
+          # Extract the changelog content
+          RELEASE_NOTES=$(node extract_changelog.js "$VERSION")
+          
+          # Save to environment file with proper escaping
+          {
+            echo "RELEASE_NOTES<<EOF"
+            echo "$RELEASE_NOTES"
+            echo "EOF"
+          } >> $GITHUB_ENV
+          
+          echo "Release notes extracted successfully"
+
+      - name: Find VSIX file
+        id: vsix
+        run: |
+          VSIX_FILE=$(find . -name "*.vsix" -type f | head -n 1)
+          if [ -z "$VSIX_FILE" ]; then
+            echo "Error: No VSIX file found"
+            exit 1
+          fi
+          echo "vsix_file=$VSIX_FILE" >> $GITHUB_OUTPUT
+          echo "vsix_name=$(basename $VSIX_FILE)" >> $GITHUB_OUTPUT
+          echo "Found VSIX file: $VSIX_FILE"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.package-version.outputs.version }}
-          name: Release v${{ steps.package-version.outputs.version }}
-          files: '*.vsix'
-          generate_release_notes: true
+          files: ${{ steps.vsix.outputs.vsix_file }}
+          body: ${{ env.RELEASE_NOTES }}
+          name: "Release v${{ steps.package-version.outputs.version }}"
+          tag_name: ${{ github.ref_name }}
           draft: false
-          prerelease: ${{ contains(steps.package-version.outputs.version, '-') }}
+          prerelease: false
+          generate_release_notes: false  # We're providing our own notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to VS Code Marketplace
-        run: vsce publish --no-dependencies
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Release Summary
+        run: |
+          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.package-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**VSIX:** ${{ steps.vsix.outputs.vsix_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Files Released" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ VSIX package uploaded to GitHub release" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Release notes extracted from CHANGELOG.md" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Download VSIX](${{ steps.vsix.outputs.vsix_file }})" >> $GITHUB_STEP_SUMMARY
