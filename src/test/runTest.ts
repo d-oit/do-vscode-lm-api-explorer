@@ -28,19 +28,24 @@ async function main() {
 			// '--disable-renderer-backgrounding',
 			// '--disable-extensions-except=' + extensionDevelopmentPath,
 			'--disable-workspace-trust'
-		] : [];
+		] : [
+			// Add argument to enable GitHub Copilot Chat extension for local testing
+			'--enable-extension', 'github.copilot-chat'
+		];
 		console.log('Launch arguments:', launchArgs);
 
 		// Download VS Code, unzip it and run the tests
-		await runTests({ 
-			extensionDevelopmentPath, 
+		await runTests({
+			extensionDevelopmentPath,
 			extensionTestsPath,
 			launchArgs,
 			// Add version specification for better compatibility
 			version: 'stable',
 			// Add timeout for CI environments
-			...(isCI && { timeout: 300000 }) // 5 minutes timeout for CI
-		});
+			...(isCI && { timeout: 300000 }), // 5 minutes timeout for CI
+			// Install GitHub Copilot Chat extension for testing
+			extensions: ['github.copilot-chat']
+		} as any); // Use type assertion to bypass potential type definition issues
 	} catch (err) {
 		console.error('Failed to run tests:', err);
 		process.exit(1);

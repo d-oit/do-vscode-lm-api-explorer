@@ -13,10 +13,23 @@ suite('LM Explorer Integration Tests', () => {
 	suiteSetup(async function() {
 		this.timeout(30000); // 30 seconds for setup
 		
+		// Add a small delay to allow extensions and language models to activate
+		await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+
+		try {
+			// Attempt to activate Copilot Chat by executing one of its commands
+			console.log('Attempting to activate Copilot Chat extension...');
+			await vscode.commands.executeCommand('github.copilot.interactive.start');
+			console.log('Copilot Chat activation attempt completed.');
+		} catch (error) {
+			console.log('Error attempting to activate Copilot Chat:', error);
+			// Ignore errors here, as Copilot Chat might not be installed or enabled
+		}
+		
 		// In test environment, extension loading works differently
 		// Let's just verify the test environment is set up correctly
 		console.log('Setting up integration test environment');
-				// Try to find the extension, but don't fail if not found in test environment
+		// Try to find the extension, but don't fail if not found in test environment
 		extension = vscode.extensions.getExtension('doit.do-vscode-lm-explorer');
 		if (extension && !extension.isActive) {
 			try {
@@ -249,14 +262,95 @@ suite('LM Explorer Integration Tests', () => {
 	suite('ModelService Integration', () => {
 		let outputChannel: vscode.OutputChannel | undefined;
 		let modelService: ModelService | undefined;
-		
+		let originalSelectChatModels: typeof vscode.lm.selectChatModels;
+
+		const mockModels: vscode.LanguageModelChat[] = [
+			{
+				id: 'mock-model-1',
+				name: 'Mock Model 1',
+				vendor: 'MockVendor',
+				family: 'MockFamily',
+				version: '1.0',
+				maxInputTokens: 8000,
+				// capabilities: { supportsSytemMessages: true }, // Removed as not a standard property
+				countTokens: async (messages: vscode.LanguageModelChatMessage[]): Promise<number> => messages.reduce((sum: number, msg: vscode.LanguageModelChatMessage) => {
+					let contentTokenCount = 0;
+					if (typeof msg.content === 'string') {
+						contentTokenCount = msg.content.length; // Simple character count as token estimate
+					} else if (Array.isArray(msg.content)) {
+						contentTokenCount = msg.content.reduce((partSum, part) => partSum + (part.kind === 'textPart' ? part.value.length : 0), 0);
+					}
+					return sum + contentTokenCount;
+				}, 0),
+				sendRequest: async (messages, options, token) => {
+					// Simulate a simple response, assuming last message content is string
+					const lastMessage = messages.length > 0 ? messages[messages.length - 1] : undefined;
+					const lastMessageContent = lastMessage && typeof lastMessage.content === 'string' ? lastMessage.content : '';
+					const responseText = `Mock response from Mock Model 1 for: ${lastMessageContent}`;
+					return {
+						text: (async function*() { yield responseText; })(),
+						stream: (async function*() { yield { kind: 'textPart', value: responseText }; })()
+					};
+				}
+			},
+			{
+				id: 'mock-model-2',
+				name: 'Mock Model 2',
+				vendor: 'AnotherMockVendor',
+				family: 'AnotherMockFamily',
+				version: '2.0',
+				maxInputTokens: 16000,
+				// capabilities: { supportsTools: true }, // Removed as not a standard property
+				countTokens: async (messages: vscode.LanguageModelChatMessage[]): Promise<number> => messages.reduce((sum: number, msg: vscode.LanguageModelChatMessage) => {
+					let contentTokenCount = 0;
+					if (typeof msg.content === 'string') {
+						contentTokenCount = msg.content.length; // Simple character count as token estimate
+					} else if (Array.isArray(msg.content)) {
+						contentTokenCount = msg.content.reduce((partSum, part) => partSum + (part.kind === 'textPart' ? part.value.length : 0), 0);
+					}
+					return sum + contentTokenCount;
+				}, 0),
+				sendRequest: async (messages, options, token) => {
+					// Simulate a different response, assuming last message content is string
+					const lastMessage = messages.length > 0 ? messages[messages.length - 1] : undefined;
+					const lastMessageContent = lastMessage && typeof lastMessage.content === 'string' ? lastMessage.content : '';
+					const responseText = `Response from Mock Model 2: ${lastMessageContent.toUpperCase()}`;
+					return {
+						text: (async function*() { yield responseText; })(),
+						stream: (async function*() { yield { kind: 'textPart', value: responseText }; })()
+					};
+				}
+			}
+			// Add more mock models here if needed to simulate 15 models
+		];
+
 		setup(() => {
 			outputChannel = vscode.window.createOutputChannel('Test Integration');
 			modelService = new ModelService(outputChannel);
+
+			// Mock vscode.lm.selectChatModels
+			originalSelectChatModels = vscode.lm.selectChatModels;
+			vscode.lm.selectChatModels = async (selector?: vscode.LanguageModelChatSelector, token?: vscode.CancellationToken): Promise<vscode.LanguageModelChat[]> => {
+				console.log('Mock selectChatModels called with selector:', selector);
+				// Return mock models, potentially filtered by vendor if selector.vendor is provided
+				if (selector?.vendor === 'copilot') {
+					// Simulate no copilot models in this mock scenario
+					return [];
+				}
+				// Basic filtering by vendor and family if provided in selector
+				return mockModels.filter(model => {
+					const vendorMatch = selector?.vendor ? model.vendor === selector.vendor : true;
+					const familyMatch = selector?.family ? model.family === selector.family : true;
+					return vendorMatch && familyMatch;
+				});
+			};
 		});
 
-		teardown(async () => {
-			// Proper cleanup with async handling
+		teardown(() => {
+			// Restore original vscode.lm.selectChatModels
+			vscode.lm.selectChatModels = originalSelectChatModels;
+
+			// Safe disposal with error handling
 			try {
 				if (modelService) {
 					modelService.clearCache();

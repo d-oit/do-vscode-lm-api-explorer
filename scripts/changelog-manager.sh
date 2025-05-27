@@ -186,24 +186,27 @@ get_next_version() {
     local minor=${VERSION_PARTS[1]}
     local patch=${VERSION_PARTS[2]}
     
+    # Handle auto type detection first
+    if [ "$type" = "auto" ]; then
+        echo "$current_version"  # Return current version, let caller handle auto detection
+        return
+    fi
+    
     # Handle 0.x versioning (pre-1.0 releases)
     if [ "$major" -eq 0 ]; then
         case "$type" in
-            "major")
+            "major"|"breaking")
                 # In 0.x, major changes increment minor version
                 minor=$((minor + 1))
                 patch=0
                 ;;
-            "minor")
+            "minor"|"feature")
                 # In 0.x, minor changes also increment minor version
                 minor=$((minor + 1))
                 patch=0
                 ;;
-            "patch")
+            "patch"|"fix")
                 patch=$((patch + 1))
-                ;;
-            "auto")
-                TYPE="auto"
                 ;;
             "prerelease")
                 patch=$((patch + 1))
@@ -214,20 +217,17 @@ get_next_version() {
     else
         # Standard semantic versioning for 1.0+
         case "$type" in
-            "major")
+            "major"|"breaking")
                 major=$((major + 1))
                 minor=0
                 patch=0
                 ;;
-            "minor")
+            "minor"|"feature")
                 minor=$((minor + 1))
                 patch=0
                 ;;
-            "patch")
+            "patch"|"fix")
                 patch=$((patch + 1))
-                ;;
-            "auto")
-                TYPE="auto"
                 ;;
             "prerelease")
                 patch=$((patch + 1))
@@ -615,7 +615,19 @@ process_ci_release() {
                 if grep -q "^---$" "$changeset_file"; then
                     # Extract from YAML frontmatter format - look for package name with version type
                     local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
+<<<<<<< Updated upstream
                     if echo "$yaml_content" | grep -q ': major'; then
+=======
+                    # Look for package-scoped version declarations first
+                    if echo "$yaml_content" | grep -q '"do-vscode-lm-explorer": major\|"do-vscode-lm-explorer": "major"'; then
+                        type="breaking"
+                    elif echo "$yaml_content" | grep -q '"do-vscode-lm-explorer": minor\|"do-vscode-lm-explorer": "minor"'; then
+                        type="feature"
+                    elif echo "$yaml_content" | grep -q '"do-vscode-lm-explorer": patch\|"do-vscode-lm-explorer": "patch"'; then
+                        type="fix"
+                    # Fallback to generic type declarations
+                    elif echo "$yaml_content" | grep -q ': major'; then
+>>>>>>> Stashed changes
                         type="breaking"
                     elif echo "$yaml_content" | grep -q ': minor'; then
                         type="feature"
