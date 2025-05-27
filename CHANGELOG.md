@@ -5,8 +5,11 @@ All notable changes to the "do-vscode-lm-explorer" extension will be documented 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 ## [0.8.0] - 2025-05-27
 
-### Changed
-
+### Fixed
+- Complete GitHub Actions release workflow validation and automation
+- Fixed pre-commit hook to allow GitHub Actions automated commits
+- Resolved all CI/CD pipeline issues for automated releases
+- Verified end-to-end release process with proper version detection
 
 ## [0.7.0] - 2025-05-27
 

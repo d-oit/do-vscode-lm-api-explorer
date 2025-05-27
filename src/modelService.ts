@@ -1,19 +1,22 @@
 import * as vscode from 'vscode';
 import { ExtendedLanguageModelChat, ModelSummary, SendResult, ModelNotSupportedError } from './types';
-import { UI_TEXT, ERROR_MESSAGES, PROGRESS_STEPS } from './constants';
+import { UI_TEXT, ERROR_MESSAGES } from './constants';
 import { ModelTestingProgressReporter } from './progressReporter';
 
 export class ModelService {
 	private logger: vscode.OutputChannel;
-private _cachedModels: ExtendedLanguageModelChat[] | null = null;
-private _cachedSendResults: Record<string, SendResult> | null = null;
+	private _cachedModels: ExtendedLanguageModelChat[] | null = null;
+	private _cachedSendResults: Record<string, SendResult> | null = null;
+
+	private readonly MAX_FETCH_RETRIES = 3;
+	private readonly FETCH_RETRY_DELAY_MS = 500;
 
 	constructor(logger: vscode.OutputChannel) {
 		this.logger = logger;
 	}
 	async fetchModels(cancellationToken?: vscode.CancellationToken): Promise<ExtendedLanguageModelChat[]> {
 		this.logger.appendLine(`[${new Date().toISOString()}] Starting model fetch...`);
-		
+
 		if (this._cachedModels) {
 			this.logger.appendLine(`[${new Date().toISOString()}] Returning cached models.`);
 			return this._cachedModels;
@@ -25,19 +28,14 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 
 		let models: ExtendedLanguageModelChat[] = [];
 		
-		// Try Copilot models first
+		// First try to get Copilot models - this will trigger permission dialog if needed
+		this.logger.appendLine(`[${new Date().toISOString()}] Fetching Copilot models...`);
+		
 		try {
-			this.logger.appendLine(`[${new Date().toISOString()}] Fetching Copilot models...`);
 			models = await vscode.lm.selectChatModels({ vendor: 'copilot' }) as ExtendedLanguageModelChat[];
-			this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} Copilot models`);		} catch (err) {
+			this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} Copilot models`);
+		} catch (err) {
 			this.logger.appendLine(`[${new Date().toISOString()}] Error fetching Copilot models: ${String(err)}`);
-			
-			// Check if this is a permission issue
-			if (err instanceof vscode.LanguageModelError) {
-				if (err.code === vscode.LanguageModelError.NoPermissions.name) {
-					throw new Error('Language model access permission not granted. Please run the command again and grant permission when prompted.');
-				}
-			}
 			models = [];
 		}
 
@@ -45,28 +43,30 @@ private _cachedSendResults: Record<string, SendResult> | null = null;
 			throw new vscode.CancellationError();
 		}
 
-		// Fallback to all models if no Copilot models found
+		// If no Copilot models, try all models
 		if (!models || models.length === 0) {
+			this.logger.appendLine(`[${new Date().toISOString()}] No Copilot models found, fetching all available models...`);
+			
 			try {
-				this.logger.appendLine(`[${new Date().toISOString()}] Fetching all available models...`);
 				models = await vscode.lm.selectChatModels({}) as ExtendedLanguageModelChat[];
-				this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} total models`);			} catch (err) {
+				this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} total models`);
+			} catch (err) {
 				this.logger.appendLine(`[${new Date().toISOString()}] Error fetching all models: ${String(err)}`);
 				
-				// Check if this is a permission issue
-				if (err instanceof vscode.LanguageModelError) {
-					if (err.code === vscode.LanguageModelError.NoPermissions.name) {
-						throw new Error('Language model access permission not granted. Please run the command again and grant permission when prompted.');
-					}
+				// Only throw if it's a real error, not a permission issue that VS Code should handle
+				if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
+					// This should trigger the permission dialog - let VS Code handle it
+					throw err;
 				}
-				throw new Error(`Failed to fetch language models: ${String(err)}`);
+				
+				models = []; // Set to empty array instead of throwing
 			}
 		}
 
 		if (cancellationToken?.isCancellationRequested) {
 			throw new vscode.CancellationError();
 		}
-		
+
 		if (!models || models.length === 0) {
 			throw new Error(ERROR_MESSAGES.NO_MODELS);
 		}

@@ -27,7 +27,8 @@ suite('LM Explorer Integration Tests', () => {
 		}
 	});
 
-	suite('Extension Lifecycle', () => {		test('Extension package.json is valid', () => {
+	suite('Extension Lifecycle', () => {
+		test('Extension package.json is valid', () => {
 			assert.ok(extension, 'Extension should be available');
 			const packageJSON = extension.packageJSON;
 			
@@ -51,7 +52,8 @@ suite('LM Explorer Integration Tests', () => {
 			assert.ok(extension, 'Extension should be available');
 			const packageJSON = extension.packageJSON;
 			
-			assert.ok(packageJSON.activationEvents, 'Should have activation events');			assert.ok(
+			assert.ok(packageJSON.activationEvents, 'Should have activation events');
+			assert.ok(
 				packageJSON.activationEvents.includes('onCommand:do-vscode-lm-explorer.discoverModels'),
 				'Should activate on discoverModels command'
 			);
@@ -60,7 +62,8 @@ suite('LM Explorer Integration Tests', () => {
 
 	suite('Command Execution', () => {
 		test('Command is properly registered', async () => {
-			const commands = await vscode.commands.getCommands(true);			assert.ok(
+			const commands = await vscode.commands.getCommands(true);
+			assert.ok(
 				commands.includes('do-vscode-lm-explorer.discoverModels'),
 				'discoverModels command should be registered with VS Code'
 			);
@@ -75,7 +78,7 @@ suite('LM Explorer Integration Tests', () => {
 			try {
 				// Create a cancellation token to test cancellation support
 				const cancellationTokenSource = new vscode.CancellationTokenSource();
-						// Start command execution
+				// Start command execution
 				const commandPromise = vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
 				
 				// Cancel after a short delay to test cancellation handling
@@ -103,7 +106,7 @@ suite('LM Explorer Integration Tests', () => {
 			
 			let progressReported = false;
 			let error: any = undefined;
-					// Monitor for progress notifications (this is tricky to test directly)
+			// Monitor for progress notifications (this is tricky to test directly)
 			try {
 				await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
 				progressReported = true; // If command completes, progress was likely reported
@@ -138,7 +141,8 @@ suite('LM Explorer Integration Tests', () => {
 				if (message.includes('Failed to list language models')) {
 					messageShown = true;
 				}
-				return originalShowError(message, ...items);			};
+				return originalShowError(message, ...items);
+			};
 			
 			try {
 				await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
@@ -193,7 +197,7 @@ suite('LM Explorer Integration Tests', () => {
 			
 			// This test verifies that our extension properly handles various LM API error scenarios
 			let errorHandledCorrectly = false;
-					try {
+			try {
 				// Try to call our command - it should handle any LM API errors gracefully
 				await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
 				errorHandledCorrectly = true;
@@ -218,7 +222,7 @@ suite('LM Explorer Integration Tests', () => {
 	suite('Output and Logging', () => {
 		test('Extension creates output channel', async function() {
 			this.timeout(5000);
-					// Execute command to trigger output channel creation
+			// Execute command to trigger output channel creation
 			try {
 				await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
 			} catch (e) {
@@ -243,22 +247,36 @@ suite('LM Explorer Integration Tests', () => {
 		});
 	});
 	suite('ModelService Integration', () => {
-		let outputChannel: vscode.OutputChannel;
-		let modelService: ModelService;
+		let outputChannel: vscode.OutputChannel | undefined;
+		let modelService: ModelService | undefined;
+		
 		setup(() => {
 			outputChannel = vscode.window.createOutputChannel('Test Integration');
 			modelService = new ModelService(outputChannel);
 		});
 
-		teardown(() => {
-			// Safe disposal with error handling
+		teardown(async () => {
+			// Proper cleanup with async handling
 			try {
+				if (modelService) {
+					modelService.clearCache();
+					modelService = undefined;
+				}
+				
 				if (outputChannel) {
-					outputChannel.dispose();
+					// Use setTimeout to defer disposal and avoid disposable store conflicts
+					setTimeout(() => {
+						try {
+							outputChannel?.dispose();
+						} catch (error) {
+							// Safely ignore disposal errors in test environment
+							console.log('Integration test cleanup: disposal error (ignored):', error);
+						}
+					}, 0);
+					outputChannel = undefined;
 				}
 			} catch (error) {
-				// Ignore disposal errors in test environment
-				console.log('Integration test cleanup: disposal error (ignored):', error);
+				console.log('Integration test cleanup error (ignored):', error);
 			}
 		});
 
@@ -269,6 +287,7 @@ suite('LM Explorer Integration Tests', () => {
 			let errorHandled = false;
 			
 			try {
+				assert.ok(modelService, 'ModelService should be initialized');
 				const models = await modelService.fetchModels();
 				modelsFound = models && models.length > 0;
 				
@@ -303,6 +322,7 @@ suite('LM Explorer Integration Tests', () => {
 			cancellationTokenSource.cancel();
 			
 			try {
+				assert.ok(modelService, 'ModelService should be initialized');
 				await modelService.fetchModels(cancellationTokenSource.token);
 				assert.fail('Should have thrown CancellationError');
 			} catch (error) {
@@ -314,6 +334,7 @@ suite('LM Explorer Integration Tests', () => {
 			this.timeout(15000);
 			
 			try {
+				assert.ok(modelService, 'ModelService should be initialized');
 				// First try to get models
 				const models = await modelService.fetchModels();
 				if (models && models.length > 0) {
@@ -325,7 +346,7 @@ suite('LM Explorer Integration Tests', () => {
 					};
 					
 					// Test the models
-					const results = await modelService.testModels(models.slice(0, 1), progress); // Test only first model
+					const results = await modelService!.testModels(models.slice(0, 1), progress); // Test only first model
 					
 					assert.ok(typeof results === 'object', 'Should return results object');
 					const firstModelId = models[0].id;
@@ -380,11 +401,14 @@ suite('LM Explorer Integration Tests', () => {
 			assert.ok(html.includes('justification'), 'Should document justification parameter');
 			assert.ok(html.includes('modelOptions'), 'Should document modelOptions parameter');
 			assert.ok(html.includes('tools'), 'Should document tools parameter');
-			assert.ok(html.includes('toolMode'), 'Should document toolMode parameter');			assert.ok(html.includes('temperature'), 'Should document temperature sub-option');
+			assert.ok(html.includes('toolMode'), 'Should document toolMode parameter');
+			assert.ok(html.includes('temperature'), 'Should document temperature sub-option');
 			assert.ok(html.includes('max_tokens'), 'Should document max_tokens sub-option');
 			// Check for model defaults documentation
 			assert.ok(html.includes('model defaults'), 'Should mention using model defaults');
-		});		test('HtmlGenerator displays actual request options for models', () => {
+		});
+		
+		test('HtmlGenerator displays actual request options for models', () => {
 			const testData = {
 				models: [{
 					id: 'test-model',
@@ -463,7 +487,8 @@ suite('LM Explorer Integration Tests', () => {
 		test('Extension handles various error scenarios gracefully', async function() {
 			this.timeout(10000);
 			
-			const errorScenarios = [				// Test with no models available
+			const errorScenarios = [
+				// Test with no models available
 				async () => {
 					try {
 						await vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels');
@@ -495,7 +520,8 @@ suite('LM Explorer Integration Tests', () => {
 			this.timeout(15000);
 			
 			// Test concurrent command executions
-			const promises = [];			for (let i = 0; i < 3; i++) {
+			const promises = [];
+			for (let i = 0; i < 3; i++) {
 				promises.push(
 					Promise.resolve(vscode.commands.executeCommand('do-vscode-lm-explorer.discoverModels')).catch((e: any) => e)
 				);
