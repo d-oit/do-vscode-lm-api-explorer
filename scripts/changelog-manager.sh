@@ -186,24 +186,27 @@ get_next_version() {
     local minor=${VERSION_PARTS[1]}
     local patch=${VERSION_PARTS[2]}
     
+    # Handle auto type detection first
+    if [ "$type" = "auto" ]; then
+        echo "$current_version"  # Return current version, let caller handle auto detection
+        return
+    fi
+    
     # Handle 0.x versioning (pre-1.0 releases)
     if [ "$major" -eq 0 ]; then
         case "$type" in
-            "major")
+            "major"|"breaking")
                 # In 0.x, major changes increment minor version
                 minor=$((minor + 1))
                 patch=0
                 ;;
-            "minor")
+            "minor"|"feature")
                 # In 0.x, minor changes also increment minor version
                 minor=$((minor + 1))
                 patch=0
                 ;;
-            "patch")
+            "patch"|"fix")
                 patch=$((patch + 1))
-                ;;
-            "auto")
-                TYPE="auto"
                 ;;
             "prerelease")
                 patch=$((patch + 1))
@@ -214,20 +217,17 @@ get_next_version() {
     else
         # Standard semantic versioning for 1.0+
         case "$type" in
-            "major")
+            "major"|"breaking")
                 major=$((major + 1))
                 minor=0
                 patch=0
                 ;;
-            "minor")
+            "minor"|"feature")
                 minor=$((minor + 1))
                 patch=0
                 ;;
-            "patch")
+            "patch"|"fix")
                 patch=$((patch + 1))
-                ;;
-            "auto")
-                TYPE="auto"
                 ;;
             "prerelease")
                 patch=$((patch + 1))
@@ -333,21 +333,25 @@ update_changelog() {
                 
                 # Check if it's new YAML frontmatter format
                 if grep -q "^---$" "$changeset_file"; then
-                    # Extract from YAML frontmatter format
-                    local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | grep -E '^\s*".*":\s*(patch|minor|major|fix|feature|breaking)')
-                    if echo "$yaml_content" | grep -q "patch\|fix"; then
+                    # Extract from YAML frontmatter format - look for package name with version type
+                    local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
+                    if echo "$yaml_content" | grep -q ': patch'; then
                         type="fix"
                         category="Fixed"
-                    elif echo "$yaml_content" | grep -q "minor\|feature"; then
+                    elif echo "$yaml_content" | grep -q ': minor'; then
                         type="feature" 
                         category="Added"
-                    elif echo "$yaml_content" | grep -q "major\|breaking"; then
+                    elif echo "$yaml_content" | grep -q ': major'; then
                         type="breaking"
                         category="Changed"
                     fi
                     
-                    # Extract description from content after frontmatter
-                    description=$(sed -n '/^---$/,$p' "$changeset_file" | tail -n +2 | sed '/^---$/d' | sed '/^$/d' | head -1)
+                    # Extract description from content after frontmatter - get the actual description text
+                    description=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | tail -n +2 | sed '/^---$/d' | head -1 | grep -v '^$')
+                    if [ -z "$description" ]; then
+                        # If no description in frontmatter, get first line after frontmatter
+                        description=$(sed -n '/^---$/,$p' "$changeset_file" | tail -n +2 | sed '/^---$/d' | sed '/^$/d' | head -1)
+                    fi
                 else
                     # Old format - extract type and description
                     type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2)
@@ -470,13 +474,13 @@ show_changeset_status() {
         
         # Check if it's new YAML frontmatter format
         if grep -q "^---$" "$changeset_file"; then
-            # Extract from YAML frontmatter format
-            local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | grep -E '^\s*".*":\s*(patch|minor|major|fix|feature|breaking)')
-            if echo "$yaml_content" | grep -q "patch\|fix"; then
+            # Extract from YAML frontmatter format - look for package name with version type
+            local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
+            if echo "$yaml_content" | grep -q ': patch'; then
                 type="fix"
-            elif echo "$yaml_content" | grep -q "minor\|feature"; then
+            elif echo "$yaml_content" | grep -q ': minor'; then
                 type="feature"
-            elif echo "$yaml_content" | grep -q "major\|breaking"; then
+            elif echo "$yaml_content" | grep -q ': major'; then
                 type="breaking"
             fi
         else
@@ -515,18 +519,22 @@ show_changeset_status() {
         
         # Check if it's new YAML frontmatter format
         if grep -q "^---$" "$changeset_file"; then
-            # Extract from YAML frontmatter format
-            local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | grep -E '^\s*".*":\s*(patch|minor|major|fix|feature|breaking)')
-            if echo "$yaml_content" | grep -q "patch\|fix"; then
+            # Extract from YAML frontmatter format - look for package name with version type
+            local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
+            if echo "$yaml_content" | grep -q ': patch'; then
                 type="fix"
-            elif echo "$yaml_content" | grep -q "minor\|feature"; then
+            elif echo "$yaml_content" | grep -q ': minor'; then
                 type="feature"
-            elif echo "$yaml_content" | grep -q "major\|breaking"; then
+            elif echo "$yaml_content" | grep -q ': major'; then
                 type="breaking"
             fi
             
-            # Extract description from content after frontmatter
-            description=$(sed -n '/^---$/,$p' "$changeset_file" | tail -n +2 | sed '/^---$/d' | sed '/^$/d' | head -1)
+            # Extract description from content after frontmatter - get the actual description text
+            description=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | tail -n +2 | sed '/^---$/d' | head -1 | grep -v '^$')
+            if [ -z "$description" ]; then
+                # If no description in frontmatter, get first line after frontmatter
+                description=$(sed -n '/^---$/,$p' "$changeset_file" | tail -n +2 | sed '/^---$/d' | sed '/^$/d' | head -1)
+            fi
             date="N/A (YAML format)"
         else
             # Old format
@@ -605,13 +613,25 @@ process_ci_release() {
                 
                 # Check if it's new YAML frontmatter format
                 if grep -q "^---$" "$changeset_file"; then
-                    # Extract from YAML frontmatter format
-                    local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | grep -E '^\s*".*":\s*(patch|minor|major|fix|feature|breaking)')
-                    if echo "$yaml_content" | grep -q "major\|breaking"; then
+                    # Extract from YAML frontmatter format - look for package name with version type
+                    local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
+<<<<<<< Updated upstream
+                    if echo "$yaml_content" | grep -q ': major'; then
+=======
+                    # Look for package-scoped version declarations first
+                    if echo "$yaml_content" | grep -q '"do-vscode-lm-explorer": major\|"do-vscode-lm-explorer": "major"'; then
                         type="breaking"
-                    elif echo "$yaml_content" | grep -q "minor\|feature"; then
+                    elif echo "$yaml_content" | grep -q '"do-vscode-lm-explorer": minor\|"do-vscode-lm-explorer": "minor"'; then
                         type="feature"
-                    elif echo "$yaml_content" | grep -q "patch\|fix"; then
+                    elif echo "$yaml_content" | grep -q '"do-vscode-lm-explorer": patch\|"do-vscode-lm-explorer": "patch"'; then
+                        type="fix"
+                    # Fallback to generic type declarations
+                    elif echo "$yaml_content" | grep -q ': major'; then
+>>>>>>> Stashed changes
+                        type="breaking"
+                    elif echo "$yaml_content" | grep -q ': minor'; then
+                        type="feature"
+                    elif echo "$yaml_content" | grep -q ': patch'; then
                         type="fix"
                     fi
                 else
@@ -755,8 +775,56 @@ case "$COMMAND" in
             # Handle auto type detection
             version_type="$TYPE"
             if [ "$TYPE" = "auto" ]; then
-                echo -e "${CYAN}Auto-detecting change type from git commits...${NC}"
-                version_type=$(get_change_type_from_git 10)
+                echo -e "${CYAN}Auto-detecting change type from changesets...${NC}"
+                
+                # Check changesets for breaking changes or features first
+                local has_breaking=false
+                local has_features=false
+                local has_patches=false
+                
+                if [ -d "$CHANGESET_DIR" ]; then
+                    for changeset_file in "$CHANGESET_DIR"/*.md; do
+                        if [ -f "$changeset_file" ] && [ "$(basename "$changeset_file")" != "README.md" ]; then
+                            local type=""
+                            
+                            # Check if it's new YAML frontmatter format
+                            if grep -q "^---$" "$changeset_file"; then
+                                # Extract from YAML frontmatter format - look for package name with version type
+                                local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
+                                if echo "$yaml_content" | grep -q ': major'; then
+                                    type="breaking"
+                                elif echo "$yaml_content" | grep -q ': minor'; then
+                                    type="feature"
+                                elif echo "$yaml_content" | grep -q ': patch'; then
+                                    type="fix"
+                                fi
+                            else
+                                # Old format
+                                type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
+                            fi
+                            
+                            case "$type" in
+                                "breaking"|"major") has_breaking=true ;;
+                                "feature"|"enhancement") has_features=true ;;
+                                "fix"|"patch") has_patches=true ;;
+                            esac
+                        fi
+                    done
+                fi
+                
+                # Determine version type based on changesets
+                if [ "$has_breaking" = true ]; then
+                    version_type="major"
+                elif [ "$has_features" = true ]; then
+                    version_type="minor"
+                elif [ "$has_patches" = true ]; then
+                    version_type="patch"
+                else
+                    # Fallback to git commit analysis if no changesets
+                    echo -e "${YELLOW}No changesets found, falling back to git commit analysis...${NC}"
+                    version_type=$(get_change_type_from_git 10)
+                fi
+                
                 echo -e "${GREEN}Auto-detected version type: $version_type${NC}"
             fi
             
@@ -801,8 +869,56 @@ case "$COMMAND" in
             # Handle auto-detection
             version_type="$TYPE"
             if [ "$TYPE" = "auto" ]; then
-                echo -e "${CYAN}Auto-detecting change type from git commits...${NC}"
-                version_type=$(get_change_type_from_git 10)
+                echo -e "${CYAN}Auto-detecting change type from changesets...${NC}"
+                
+                # Check changesets for breaking changes or features first
+                local has_breaking=false
+                local has_features=false
+                local has_patches=false
+                
+                if [ -d "$CHANGESET_DIR" ]; then
+                    for changeset_file in "$CHANGESET_DIR"/*.md; do
+                        if [ -f "$changeset_file" ] && [ "$(basename "$changeset_file")" != "README.md" ]; then
+                            local type=""
+                            
+                            # Check if it's new YAML frontmatter format
+                            if grep -q "^---$" "$changeset_file"; then
+                                # Extract from YAML frontmatter format - look for package name with version type
+                                local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
+                                if echo "$yaml_content" | grep -q ': major'; then
+                                    type="breaking"
+                                elif echo "$yaml_content" | grep -q ': minor'; then
+                                    type="feature"
+                                elif echo "$yaml_content" | grep -q ': patch'; then
+                                    type="fix"
+                                fi
+                            else
+                                # Old format
+                                type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
+                            fi
+                            
+                            case "$type" in
+                                "breaking"|"major") has_breaking=true ;;
+                                "feature"|"enhancement") has_features=true ;;
+                                "fix"|"patch") has_patches=true ;;
+                            esac
+                        fi
+                    done
+                fi
+                
+                # Determine version type based on changesets
+                if [ "$has_breaking" = true ]; then
+                    version_type="major"
+                elif [ "$has_features" = true ]; then
+                    version_type="minor"
+                elif [ "$has_patches" = true ]; then
+                    version_type="patch"
+                else
+                    # Fallback to git commit analysis if no changesets
+                    echo -e "${YELLOW}No changesets found, falling back to git commit analysis...${NC}"
+                    version_type=$(get_change_type_from_git 10)
+                fi
+                
                 echo -e "${GREEN}Auto-detected version type: $version_type${NC}"
             fi
             

@@ -1,13 +1,13 @@
 import { ExtendedLanguageModelChat, ModelExplorerData } from './types';
-import { 
-	LANGUAGE_MODEL_CHAT_REQUEST_OPTIONS, 
-	MODEL_OPTIONS, 
-	HTML_CONTENT 
+import {
+	LANGUAGE_MODEL_CHAT_REQUEST_OPTIONS,
+	MODEL_OPTIONS,
+	HTML_CONTENT
 } from './constants';
 
 export class HtmlGenerator {
 
-	static generateHtml(data: ModelExplorerData): string {
+	static generateHtml(data: ModelExplorerData, version: string): string {
 		return `
 <!DOCTYPE html>
 <html lang="en">
@@ -24,6 +24,7 @@ export class HtmlGenerator {
 	${this.generateModelsSection(data.models, data.sendResults)}
 	${this.generateRequestOptionsSection()}
 	${this.generateJsonSection(data)}
+	${this.generateFooter(version)}
 	${this.generateToast()}
 	${this.generateScripts()}
 </body>
@@ -275,6 +276,17 @@ export class HtmlGenerator {
 			</div>
 		`;
 	}
+
+	private static generateFooter(version: string): string {
+		// Use version from package.json
+		
+		return `
+			<div style="text-align: center; margin-top: 3em; padding: 1em; border-top: 1px solid var(--vscode-panel-border); color: var(--vscode-descriptionForeground); font-size: 0.9em;">
+				<p>d.o. vscode-lm Explorer v${version}</p>
+			</div>
+		`;
+	}
+
 	private static generateModelsSection(models: ExtendedLanguageModelChat[], sendResults: any): string {
 		return `
 			<h1>${HTML_CONTENT.SECTIONS.MODELS}</h1>
