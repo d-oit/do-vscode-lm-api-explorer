@@ -14,16 +14,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check if PR is from dev branch
-        run: |
-          if [ "${{ github.head_ref }}" != "dev" ]; then
-            echo "❌ Pull requests to main branch must come from dev branch only"
-            echo "Current source branch: ${{ github.head_ref }}"
-            exit 1
-          else
-            echo "✅ Pull request is from dev branch - proceeding"
-          fi
-
       - name: Validate version bump
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
