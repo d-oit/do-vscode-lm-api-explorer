@@ -3,7 +3,7 @@
   "displayName": "d.o. vscode-lm Explorer",
   "publisher": "doit",
   "description": "Comprehensive VS Code extension that explores and tests Language Model API models with modern accordion UI, complete API documentation, cancellation support, and modular architecture.",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.90.0"
@@ -55,7 +55,8 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "node ./out/test/runTest.js",
-    "prepare": "husky",    "release:prepare": "bash ./scripts/prepare-release.sh",
+    "prepare": "husky",
+    "release:prepare": "bash ./scripts/prepare-release.sh",
     "workflows:validate": "echo 'Workflow validation not implemented for Bash'",
     "changeset:create": "bash ./scripts/changelog-manager.sh -c create-changeset -i",
     "changeset:release": "bash ./scripts/changelog-manager.sh -c update-changelog",

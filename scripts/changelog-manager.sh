@@ -57,17 +57,17 @@ get_change_type_from_git() {
     local minor_score=0
     local patch_score=0
     
-    echo -e "${CYAN}Analyzing recent commits for change type...${NC}"
+    echo -e "${CYAN}Analyzing recent commits for change type...${NC}" >&2
     
     while IFS= read -r commit; do
         local message=$(echo "$commit" | tr '[:upper:]' '[:lower:]')
-        echo -e "  ${GRAY}$commit${NC}"
+        echo -e "  ${GRAY}$commit${NC}" >&2
         
         # Check for breaking changes
         for keyword in $breaking_keywords; do
             if echo "$message" | grep -q "$keyword"; then
                 major_score=$((major_score + 3))
-                echo -e "    ${RED}-> Breaking change detected: '$keyword'${NC}"
+                echo -e "    ${RED}-> Breaking change detected: '$keyword'${NC}" >&2
             fi
         done
         
@@ -75,7 +75,7 @@ get_change_type_from_git() {
         for keyword in $feature_keywords; do
             if echo "$message" | grep -q "$keyword"; then
                 minor_score=$((minor_score + 2))
-                echo -e "    ${GREEN}-> Feature detected: '$keyword'${NC}"
+                echo -e "    ${GREEN}-> Feature detected: '$keyword'${NC}" >&2
             fi
         done
         
@@ -83,7 +83,7 @@ get_change_type_from_git() {
         for keyword in $fix_keywords; do
             if echo "$message" | grep -q "$keyword"; then
                 patch_score=$((patch_score + 1))
-                echo -e "    ${BLUE}-> Fix detected: '$keyword'${NC}"
+                echo -e "    ${BLUE}-> Fix detected: '$keyword'${NC}" >&2
             fi
         done
         
@@ -91,7 +91,7 @@ get_change_type_from_git() {
         for keyword in $enhancement_keywords; do
             if echo "$message" | grep -q "$keyword"; then
                 minor_score=$((minor_score + 1))
-                echo -e "    ${YELLOW}-> Enhancement detected: '$keyword'${NC}"
+                echo -e "    ${YELLOW}-> Enhancement detected: '$keyword'${NC}" >&2
             fi
         done
     done <<< "$commits"
@@ -105,11 +105,11 @@ get_change_type_from_git() {
         detected_type="minor"
     fi
     
-    echo -e "\n${CYAN}Score analysis:${NC}"
-    echo -e "  ${RED}Major (breaking): $major_score${NC}"
-    echo -e "  ${GREEN}Minor (features): $minor_score${NC}"
-    echo -e "  ${BLUE}Patch (fixes): $patch_score${NC}"
-    echo -e "  ${NC}Detected type: $detected_type${NC}"
+    echo -e "\n${CYAN}Score analysis:${NC}" >&2
+    echo -e "  ${RED}Major (breaking): $major_score${NC}" >&2
+    echo -e "  ${GREEN}Minor (features): $minor_score${NC}" >&2
+    echo -e "  ${BLUE}Patch (fixes): $patch_score${NC}" >&2
+    echo -e "  ${NC}Detected type: $detected_type${NC}" >&2
     
     echo "$detected_type"
 }
@@ -709,7 +709,16 @@ case "$COMMAND" in
     "full-release")
         if [ -z "$VERSION" ]; then
             current_version=$(get_current_version)
-            VERSION=$(get_next_version "$current_version" "$TYPE")
+            
+            # Handle auto-detection
+            version_type="$TYPE"
+            if [ "$TYPE" = "auto" ]; then
+                echo -e "${CYAN}Auto-detecting change type from git commits...${NC}"
+                version_type=$(get_change_type_from_git 10)
+                echo -e "${GREEN}Auto-detected version type: $version_type${NC}"
+            fi
+            
+            VERSION=$(get_next_version "$current_version" "$version_type")
         fi
         
         echo -e "${CYAN}Starting full release process for version $VERSION...${NC}"

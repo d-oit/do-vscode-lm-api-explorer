@@ -3,6 +3,20 @@
 All notable changes to the "do-vscode-lm-explorer" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## [0.6.0] - 2025-05-27
+
+### Changed
+- Final validation test for complete GitHub Actions workflow
+
+## [0.5.0] - 2025-05-27
+
+### Fixed
+- Fixed GitHub Actions release workflow failure with automated version detection
+- Resolved version calculation bugs in changelog manager script 
+- Fixed debug output contamination in auto-detection logic
+- Enhanced error handling for version type detection
+- Cleaned up changelog entries and removed test duplicates
+
 
 ## [0.4.0] - 2025-05-27 - Enhanced CI/CD with changeset management
 
@@ -123,7 +137,3 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Simple HTML output with model information  
 - GitHub Copilot integration setup
 - Command registration for `Show all vscode-lm chat models`
-
-
-
-
