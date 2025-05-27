@@ -1,5 +1,6 @@
 
-if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ]; then
+# Allow GitHub Actions to commit to main branch during automated releases
+if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] && [ -z "$GITHUB_ACTIONS" ]; then
   echo "Direct commits to the main branch are not allowed. Please use a pull request."
   exit 1
 fi
