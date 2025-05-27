@@ -83,7 +83,9 @@ jobs:
         if: steps.should-process.outputs.should-process-changesets == 'true'
         run: |
           git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action (Versioning)"      - name: Run tests before versioning (optional)
+          git config --local user.name "GitHub Action (Versioning)"
+
+      - name: Run tests before versioning (optional)
         if: steps.should-process.outputs.should-process-changesets == 'true' && inputs.skip_tests_before_versioning != true && github.event_name == 'workflow_dispatch'
         run: npm test # Consider if xvfb is needed here or if tests are robust without it
 
@@ -144,20 +146,19 @@ jobs:
             echo "Push attempt $i failed. Retrying in 5 seconds..."
             sleep 5
           done
-
           echo "tag-created=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Commit and tag $TAG_NAME pushed to origin."
-      
+
       - name: Versioning Summary
         if: steps.should-process.outputs.should-process-changesets == 'true'
         run: |
-          echo "## 📝 Versioning & Tagging Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Versioning & Tagging Summary" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.version-check.outputs.version-changed }}" = "true" ]; then
-            echo "- ✅ Version bumped to: ${{ steps.changeset-process.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Tag created: ${{ steps.commit-and-tag.outputs.tag-created }}" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Changes committed and pushed." >> $GITHUB_STEP_SUMMARY
+            echo "- Version bumped to: ${{ steps.changeset-process.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Tag created: ${{ steps.commit-and-tag.outputs.tag-created }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Changes committed and pushed." >> $GITHUB_STEP_SUMMARY
           else
-            echo "- ℹ️ No version changes made or no changesets to process." >> $GITHUB_STEP_SUMMARY
+            echo "- No version changes made or no changesets to process." >> $GITHUB_STEP_SUMMARY
           fi
 
   build_and_publish:
@@ -289,22 +290,22 @@ jobs:
       - name: Final Release Summary
         run: |
           set -e
-          echo "## 🚀 Build & Publish Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Build & Publish Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version Released:** ${{ needs.version_and_tag.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** ${{ needs.version_and_tag.outputs.new_tag_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**VSIX:** ${{ steps.build-vsix.outputs.vsix_file_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 Files & Publishing" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ VSIX package built: ${{ steps.build-vsix.outputs.vsix_file_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ GitHub Release created/updated for tag ${{ needs.version_and_tag.outputs.new_tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "### Files & Publishing" >> $GITHUB_STEP_SUMMARY
+          echo "- VSIX package built: ${{ steps.build-vsix.outputs.vsix_file_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Release created/updated for tag ${{ needs.version_and_tag.outputs.new_tag_name }}" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ secrets.VSCE_PAT }}" ]; then
-            echo "- ✅ VSIX package published to VS Code Marketplace" >> $GITHUB_STEP_SUMMARY
+            echo "- VSIX package published to VS Code Marketplace" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- ⚠️ VSIX package NOT published to VS Code Marketplace (VSCE_PAT secret not found)" >> $GITHUB_STEP_SUMMARY
+            echo "- VSIX package NOT published to VS Code Marketplace (VSCE_PAT secret not found)" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "- ✅ Release notes extracted from CHANGELOG.md" >> $GITHUB_STEP_SUMMARY
+          echo "- Release notes extracted from CHANGELOG.md" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "### Links" >> $GITHUB_STEP_SUMMARY
           echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.version_and_tag.outputs.new_tag_name }})" >> $GITHUB_STEP_SUMMARY
           # Note: Direct download link from summary might be tricky if filename isn't easily predictable or if it's a private repo without token
