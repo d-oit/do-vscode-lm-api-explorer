@@ -15,15 +15,14 @@ suite('LM Explorer Integration Tests', () => {
 		
 		// Add a small delay to allow extensions and language models to activate
 		await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
-
 		try {
-			// Attempt to activate Copilot Chat by executing one of its commands
-			console.log('Attempting to activate Copilot Chat extension...');
+			// Attempt to activate extension by executing one of its commands
+			console.log('Attempting to activate extension...');
 			await vscode.commands.executeCommand('github.copilot.interactive.start');
-			console.log('Copilot Chat activation attempt completed.');
+			console.log('Extension activation attempt completed.');
 		} catch (error) {
-			console.log('Error attempting to activate Copilot Chat:', error);
-			// Ignore errors here, as Copilot Chat might not be installed or enabled
+			console.log('Error attempting to activate extension:', error);
+			// Ignore errors here, as extension might not be installed or enabled
 		}
 		
 		// In test environment, extension loading works differently
