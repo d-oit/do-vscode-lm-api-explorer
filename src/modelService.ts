@@ -18,17 +18,41 @@ export class ModelService {
 	}	async fetchModels(cancellationToken?: vscode.CancellationToken): Promise<ExtendedLanguageModelChat[]> {
 		this.logger.appendLine(`[${new Date().toISOString()}] Starting model fetch...`);
 
+		// Return cached models if available
 		if (this._cachedModels) {
-			this.logger.appendLine(`[${new Date().toISOString()}] Returning cached models.`);
+			this.logger.appendLine(`[${new Date().toISOString()}] Returning ${this._cachedModels.length} cached models`);
 			return this._cachedModels;
 		}
 
-		if (cancellationToken?.isCancellationRequested) {
-			throw new vscode.CancellationError();
+		this.logger.appendLine(`[${new Date().toISOString()}] Starting fresh model discovery...`);
+		
+		// Check if VS Code LM API is available
+		if (!vscode.lm) {
+			this.logger.appendLine(`[${new Date().toISOString()}] ERROR: VS Code Language Model API not available. Your VS Code version might be too old.`);
+			throw new Error('VS Code Language Model API not available. Please update VS Code to version 1.90.0 or later.');
+		}
+
+		this.logger.appendLine(`[${new Date().toISOString()}] VS Code LM API is available`);
+
+		// Check if GitHub Copilot Chat extension is active
+		const copilotExtension = vscode.extensions.getExtension('github.copilot-chat');
+		if (copilotExtension) {
+			this.logger.appendLine(`[${new Date().toISOString()}] GitHub Copilot Chat extension found. Active: ${copilotExtension.isActive}`);
+			if (!copilotExtension.isActive) {
+				this.logger.appendLine(`[${new Date().toISOString()}] Attempting to activate GitHub Copilot Chat extension...`);
+				try {
+					await copilotExtension.activate();
+					this.logger.appendLine(`[${new Date().toISOString()}] GitHub Copilot Chat extension activated successfully`);
+				} catch (err) {
+					this.logger.appendLine(`[${new Date().toISOString()}] Failed to activate GitHub Copilot Chat extension: ${String(err)}`);
+				}
+			}
+		} else {
+			this.logger.appendLine(`[${new Date().toISOString()}] WARNING: GitHub Copilot Chat extension not found`);
 		}
 
 		let models: ExtendedLanguageModelChat[] = [];
-		
+
 		// First try to get Copilot models
 		this.logger.appendLine(`[${new Date().toISOString()}] Fetching Copilot models...`);
 		
@@ -61,13 +85,68 @@ export class ModelService {
 			throw new vscode.CancellationError();
 		}
 
-		// If no models found, show the user-friendly message
+		// Enhanced debugging information
+		this.logger.appendLine(`[${new Date().toISOString()}] Model discovery results:`);
+		this.logger.appendLine(`[${new Date().toISOString()}] - Total models found: ${models?.length || 0}`);
+		
+		if (models && models.length > 0) {
+			for (const model of models) {
+				this.logger.appendLine(`[${new Date().toISOString()}] - Model: ${model.id} (vendor: ${model.vendor || 'unknown'})`);
+			}
+		}
+		// If no models found, provide detailed troubleshooting information
 		if (!models || models.length === 0) {
+			this.logger.appendLine(`[${new Date().toISOString()}] No models found. Troubleshooting information:`);
+			
+			// Check various extensions that might provide language models
+			const extensionsToCheck = [
+				'github.copilot-chat',
+				'github.copilot',
+				'ms-vscode.vscode-copilot-chat'
+			];
+			
+			for (const extId of extensionsToCheck) {
+				const ext = vscode.extensions.getExtension(extId);
+				if (ext) {
+					this.logger.appendLine(`[${new Date().toISOString()}] - Extension ${extId}: installed, active: ${ext.isActive}`);
+				} else {
+					this.logger.appendLine(`[${new Date().toISOString()}] - Extension ${extId}: not installed`);
+				}
+			}
+			
+			// Show user-friendly error with guidance
 			throw new Error(ERROR_MESSAGES.NO_MODELS);
 		}
+		// Check if models have permission without triggering consent dialogs
+		if (this.context) {
+			this.logger.appendLine(`[${new Date().toISOString()}] Checking permission status for discovered models...`);
+			let modelsWithoutPermission = 0;
+			
+			try {
+				const accessInfo = this.context.languageModelAccessInformation;
+				for (const model of models) {
+					const canSend = accessInfo.canSendRequest(model);
+					if (canSend !== true) {
+						modelsWithoutPermission++;
+					}
+				}
+				
+				this.logger.appendLine(`[${new Date().toISOString()}] Permission status: ${models.length - modelsWithoutPermission}/${models.length} models have permission`);
+				
+				// Log diagnostic information but don't block the flow
+				// According to VS Code docs, permission dialogs should only appear during sendRequest() calls
+				if (modelsWithoutPermission === models.length) {
+					this.logger.appendLine(`[${new Date().toISOString()}] All models lack permission - permission dialog will appear naturally during testing phase`);
+				} else if (modelsWithoutPermission > 0) {
+					this.logger.appendLine(`[${new Date().toISOString()}] Some models lack permission - this is normal for first-time usage`);
+				}
+			} catch (err) {
+				this.logger.appendLine(`[${new Date().toISOString()}] Error checking permissions (continuing anyway): ${String(err)}`);
+			}
+		}
 
-		// Check permissions for the first available model to trigger consent dialog if needed
-		await this.checkAndRequestPermission(models[0], cancellationToken);
+		// Log permission status for diagnostics but don't trigger consent dialog here
+		this.logPermissionStatus(models);
 
 		this.logger.appendLine(`[${new Date().toISOString()}] Successfully fetched ${models.length} models`);
 		this._cachedModels = models; // Cache the fetched models
@@ -75,58 +154,27 @@ export class ModelService {
 	}
 
 	/**
-	 * Check if we have permission to use a model and trigger consent dialog if needed
+	 * Log permission status for diagnostics but don't trigger consent dialog here
 	 */
-	private async checkAndRequestPermission(model: ExtendedLanguageModelChat, cancellationToken?: vscode.CancellationToken): Promise<void> {
+	private logPermissionStatus(models: ExtendedLanguageModelChat[]): void {
 		if (!this.context) {
-			// If no context available, skip permission check (mainly for tests)
-			this.logger.appendLine(`[${new Date().toISOString()}] No extension context available, skipping permission check`);
+			this.logger.appendLine(`[${new Date().toISOString()}] No extension context available, skipping permission diagnostics`);
 			return;
 		}
 
 		try {
 			const accessInfo = this.context.languageModelAccessInformation;
-			const canSend = accessInfo.canSendRequest(model);
+			this.logger.appendLine(`[${new Date().toISOString()}] Permission diagnostics for ${models.length} models:`);
 			
-			this.logger.appendLine(`[${new Date().toISOString()}] Permission check for ${model.id}: ${canSend}`);
-			
-			// If permission is explicitly false or unknown (undefined), try to trigger consent dialog
-			if (canSend !== true) {
-				this.logger.appendLine(`[${new Date().toISOString()}] Triggering permission consent dialog for ${model.id}...`);
-						// Try a minimal request to trigger the consent dialog
-				try {
-					const request = model.sendRequest(
-						[vscode.LanguageModelChatMessage.User('Hi')],
-						{ justification: 'Checking access permissions for model discovery' },
-						cancellationToken
-					);
-					
-					// Convert Thenable to Promise to handle errors properly
-					Promise.resolve(request).catch(() => {
-						// Ignore errors here as we're just trying to trigger the consent dialog
-					});
-					
-					// Wait a bit to allow the consent dialog to appear
-					await new Promise(resolve => setTimeout(resolve, 100));
-					
-				} catch (err: any) {
-					if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
-						// This is expected - throw it to let the caller handle the permission error properly
-						this.logger.appendLine(`[${new Date().toISOString()}] Permission denied for ${model.id}, throwing error for user handling`);
-						throw err;
-					}
-					// For other errors, just log and continue
-					this.logger.appendLine(`[${new Date().toISOString()}] Non-permission error during consent check: ${String(err)}`);
-				}
+			for (const model of models) {
+				const canSend = accessInfo.canSendRequest(model);
+				this.logger.appendLine(`[${new Date().toISOString()}] - ${model.id}: ${canSend === true ? 'GRANTED' : canSend === false ? 'DENIED' : 'UNKNOWN'}`);
 			}
 		} catch (err) {
-			// Re-throw permission errors, but handle other errors gracefully
-			if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
-				throw err;
-			}
-			this.logger.appendLine(`[${new Date().toISOString()}] Error during permission check: ${String(err)}`);
+			this.logger.appendLine(`[${new Date().toISOString()}] Error during permission diagnostics: ${String(err)}`);
 		}
 	}
+
 
 	buildModelSummary(models: ExtendedLanguageModelChat[], cancellationToken?: vscode.CancellationToken): Record<string, ModelSummary> {
 		this.logger.appendLine(`[${new Date().toISOString()}] Building model summary...`);

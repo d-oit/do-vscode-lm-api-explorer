@@ -3,6 +3,21 @@
 All notable changes to the "do-vscode-lm-explorer" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+
+## [0.8.1] - 2025-05-27
+
+### Fixed
+- Resolved "No AI models found" issue on first startup by improving permission handling
+- Fixed permission consent dialogs that only worked on second attempt
+- Improved model discovery to align with VS Code Language Model API permission system
+- Enhanced diagnostic logging for model permission status without triggering consent dialogs
+- Removed problematic permission checking during model discovery that interfered with natural consent flow
+
+### Changed
+- ModelService constructor now accepts optional ExtensionContext parameter for permission diagnostics
+- Permission consent dialogs now appear naturally when users test models rather than during discovery
+- Improved error handling flow to guide users through permission consent process
+
 ## [0.8.0] - 2025-05-27
 
 ### Fixed
