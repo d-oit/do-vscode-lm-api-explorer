@@ -83,10 +83,8 @@ jobs:
         if: steps.should-process.outputs.should-process-changesets == 'true'
         run: |
           git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action (Versioning)"
-
-      - name: Run tests before versioning (optional)
-        if: steps.should-process.outputs.should-process-changesets == 'true' && inputs.skip_tests_before_versioning != 'true' && github.event_name == 'workflow_dispatch'
+          git config --local user.name "GitHub Action (Versioning)"      - name: Run tests before versioning (optional)
+        if: steps.should-process.outputs.should-process-changesets == 'true' && inputs.skip_tests_before_versioning != true && github.event_name == 'workflow_dispatch'
         run: npm test # Consider if xvfb is needed here or if tests are robust without it
 
       - name: Process changesets and update version/changelog
