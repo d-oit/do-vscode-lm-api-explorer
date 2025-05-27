@@ -68,7 +68,7 @@ const createMockExplorerData = (): ModelExplorerData => {
 suite('HtmlGenerator Unit Tests', () => {
 	test('should generate complete HTML', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		// Basic HTML structure
 		assert.ok(html.includes('<!DOCTYPE html>'));
@@ -85,7 +85,7 @@ suite('HtmlGenerator Unit Tests', () => {
 
 	test('should include header with correct constants', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		assert.ok(html.includes(HTML_CONTENT.HEADER.TITLE));
 		assert.ok(html.includes(HTML_CONTENT.HEADER.SUBTITLE));
@@ -93,7 +93,7 @@ suite('HtmlGenerator Unit Tests', () => {
 
 	test('should include all section headings', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		assert.ok(html.includes(HTML_CONTENT.SECTIONS.MODELS));
 		assert.ok(html.includes(HTML_CONTENT.SECTIONS.REQUEST_OPTIONS));
@@ -102,7 +102,7 @@ suite('HtmlGenerator Unit Tests', () => {
 
 	test('should include model information', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		// Should include model names
 		assert.ok(html.includes('Test Model 1'));
@@ -119,7 +119,7 @@ suite('HtmlGenerator Unit Tests', () => {
 
 	test('should handle successful and failed models differently', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		// Successful model should have success icon
 		assert.ok(html.includes(HTML_CONTENT.BADGES.SUPPORTED));
@@ -131,7 +131,7 @@ suite('HtmlGenerator Unit Tests', () => {
 
 	test('should include request options documentation', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		// Should include parameter documentation
 		assert.ok(html.includes('justification'));
@@ -151,7 +151,7 @@ suite('HtmlGenerator Unit Tests', () => {
 
 	test('should include JSON data sections', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		// Should include JSON sections
 		assert.ok(html.includes('Models Summary JSON'));
@@ -171,7 +171,7 @@ suite('HtmlGenerator Unit Tests', () => {
 
 	test('should include interactive JavaScript', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		// Should include JavaScript functions
 		assert.ok(html.includes('function toggleAccordion'));
@@ -185,7 +185,7 @@ suite('HtmlGenerator Unit Tests', () => {
 
 	test('should include proper CSS styling', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		// Should include CSS variables for VS Code theming
 		assert.ok(html.includes('var(--vscode-'));
@@ -202,7 +202,7 @@ suite('HtmlGenerator Unit Tests', () => {
 		// Add some content that needs escaping
 		mockData.sendResults['test-model-1'].response = 'Response with <script>alert("xss")</script> content';
 		
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		// Should not contain unescaped script tags
 		assert.ok(!html.includes('<script>alert("xss")</script>'));
@@ -217,7 +217,7 @@ suite('HtmlGenerator Unit Tests', () => {
 			sendResults: {}
 		};
 		
-		const html = HtmlGenerator.generateHtml(emptyData);
+		const html = HtmlGenerator.generateHtml(emptyData, 'test-version');
 		
 		// Should still generate valid HTML structure
 		assert.ok(html.includes('<!DOCTYPE html>'));
@@ -264,7 +264,7 @@ suite('HtmlGenerator Unit Tests', () => {
 			sendResults: {}
 		};
 		
-		const html = HtmlGenerator.generateHtml(dataWithMinimalModel);
+		const html = HtmlGenerator.generateHtml(dataWithMinimalModel, 'test-version');
 		
 		// Should handle undefined maxInputTokens gracefully
 		assert.ok(html.includes('Minimal Model'));
@@ -273,7 +273,7 @@ suite('HtmlGenerator Unit Tests', () => {
 
 	test('should include accordion functionality', () => {
 		const mockData = createMockExplorerData();
-		const html = HtmlGenerator.generateHtml(mockData);
+		const html = HtmlGenerator.generateHtml(mockData, 'test-version');
 		
 		// Should include accordion headers and content
 		assert.ok(html.includes('accordion-header'));

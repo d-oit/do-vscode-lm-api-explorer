@@ -57,7 +57,7 @@ const createMockModel = (
 suite('ModelService Unit Tests', () => {
 	let modelService: ModelService;
 	setup(() => {
-		modelService = new ModelService(mockOutputChannel);
+		modelService = new ModelService(mockOutputChannel); // Context is optional for tests
 		// Clear any cached data before each test
 		modelService.clearCache();
 	});

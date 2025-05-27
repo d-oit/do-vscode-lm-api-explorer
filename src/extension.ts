@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
 				location: vscode.ProgressLocation.Notification,
 				cancellable: true
 			}, async (progress, cancellationToken) => {
-				const modelService = new ModelService(logger);
+				const modelService = new ModelService(logger, context);
 				const progressReporter = new ProgressReporter(progress);
 				
 				try {
@@ -135,7 +135,8 @@ export function activate(context: vscode.ExtensionContext) {
 						sendResults
 					};
 
-					const html = HtmlGenerator.generateHtml(explorerData);
+					const extensionVersion = context.extension.packageJSON.version;
+					const html = HtmlGenerator.generateHtml(explorerData, extensionVersion);
 					
 					const panel = vscode.window.createWebviewPanel(
 						UI_TEXT.WEBVIEW.VIEW_TYPE,
@@ -248,7 +249,7 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	const clearCacheDisposable = vscode.commands.registerCommand(COMMANDS.CLEAR_CACHE_AND_DISCOVER, async () => {
-		const modelService = new ModelService(logger); // Reuse the main logger
+		const modelService = new ModelService(logger, context); // Reuse the main logger and context
 		modelService.clearCache();
 		vscode.window.showInformationMessage(UI_TEXT.NOTIFICATIONS.CACHE_CLEARED);
 		await vscode.commands.executeCommand(COMMANDS.DISCOVER_MODELS);

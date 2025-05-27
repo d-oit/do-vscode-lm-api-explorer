@@ -310,9 +310,8 @@ suite('LM Explorer Integration Tests', () => {
 			// Add more mock models here if needed to simulate 15 models
 		];
 
-		setup(() => {
-			outputChannel = vscode.window.createOutputChannel('Test Integration');
-			modelService = new ModelService(outputChannel);
+		setup(() => {				outputChannel = vscode.window.createOutputChannel('Test Integration');
+			modelService = new ModelService(outputChannel); // Context is optional for tests
 
 			// Mock vscode.lm.selectChatModels
 			originalSelectChatModels = vscode.lm.selectChatModels;
@@ -458,7 +457,7 @@ suite('LM Explorer Integration Tests', () => {
 				sendResults: {}
 			};
 			
-			const html = HtmlGenerator.generateHtml(testData);
+			const html = HtmlGenerator.generateHtml(testData, 'test-version');
 			
 			// Basic HTML validation
 			assert.ok(html.includes('<!DOCTYPE html>'), 'Should have valid DOCTYPE');
@@ -476,7 +475,7 @@ suite('LM Explorer Integration Tests', () => {
 				sendResults: {}
 			};
 			
-			const html = HtmlGenerator.generateHtml(testData);
+			const html = HtmlGenerator.generateHtml(testData, 'test-version');
 			
 			// Check for key API documentation elements
 			assert.ok(html.includes('LanguageModelChatRequestOptions'), 'Should include API interface name');
@@ -506,7 +505,7 @@ suite('LM Explorer Integration Tests', () => {
 				sendResults: { 'test-model': { response: 'test results' } }
 				};
 			
-			const html = HtmlGenerator.generateHtml(testData);
+			const html = HtmlGenerator.generateHtml(testData, 'test-version');
 			
 			// Check for copy functionality
 			assert.ok(html.includes('copy') || html.includes('Copy'), 'Should include copy functionality');

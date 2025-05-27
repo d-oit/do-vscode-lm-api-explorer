@@ -7,12 +7,14 @@ export class ModelService {
 	private logger: vscode.OutputChannel;
 	private _cachedModels: ExtendedLanguageModelChat[] | null = null;
 	private _cachedSendResults: Record<string, SendResult> | null = null;
+	private context: vscode.ExtensionContext | null = null;
 
 	private readonly MAX_FETCH_RETRIES = 3;
 	private readonly FETCH_RETRY_DELAY_MS = 500;
 
-	constructor(logger: vscode.OutputChannel) {
+	constructor(logger: vscode.OutputChannel, context?: vscode.ExtensionContext) {
 		this.logger = logger;
+		this.context = context || null;
 	}	async fetchModels(cancellationToken?: vscode.CancellationToken): Promise<ExtendedLanguageModelChat[]> {
 		this.logger.appendLine(`[${new Date().toISOString()}] Starting model fetch...`);
 
@@ -26,9 +28,8 @@ export class ModelService {
 		}
 
 		let models: ExtendedLanguageModelChat[] = [];
-		let permissionError: vscode.LanguageModelError | null = null;
 		
-		// First try to get Copilot models - this will trigger permission dialog if needed
+		// First try to get Copilot models
 		this.logger.appendLine(`[${new Date().toISOString()}] Fetching Copilot models...`);
 		
 		try {
@@ -36,10 +37,6 @@ export class ModelService {
 			this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} Copilot models`);
 		} catch (err: any) {
 			this.logger.appendLine(`[${new Date().toISOString()}] Error fetching Copilot models: ${String(err)}`);
-			// If it's a permission error, save it but try all models first to be thorough
-			if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
-				permissionError = err;
-			}
 			models = [];
 		}
 
@@ -56,13 +53,7 @@ export class ModelService {
 				this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} total models`);
 			} catch (err) {
 				this.logger.appendLine(`[${new Date().toISOString()}] Error fetching all models: ${String(err)}`);
-				
-				// If this is also a permission error, save it
-				if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
-					permissionError = err;
-				}
-				
-				models = []; // Set to empty array instead of throwing
+				models = [];
 			}
 		}
 
@@ -70,20 +61,71 @@ export class ModelService {
 			throw new vscode.CancellationError();
 		}
 
-		// If no models found and we have a permission error, throw it to trigger VS Code's permission dialog
-		if ((!models || models.length === 0) && permissionError) {
-			this.logger.appendLine(`[${new Date().toISOString()}] No models available, re-throwing permission error to trigger consent dialog`);
-			throw permissionError;
-		}
-
-		// If no models and no permission error, show the user-friendly message
+		// If no models found, show the user-friendly message
 		if (!models || models.length === 0) {
 			throw new Error(ERROR_MESSAGES.NO_MODELS);
 		}
 
+		// Check permissions for the first available model to trigger consent dialog if needed
+		await this.checkAndRequestPermission(models[0], cancellationToken);
+
 		this.logger.appendLine(`[${new Date().toISOString()}] Successfully fetched ${models.length} models`);
 		this._cachedModels = models; // Cache the fetched models
 		return models;
+	}
+
+	/**
+	 * Check if we have permission to use a model and trigger consent dialog if needed
+	 */
+	private async checkAndRequestPermission(model: ExtendedLanguageModelChat, cancellationToken?: vscode.CancellationToken): Promise<void> {
+		if (!this.context) {
+			// If no context available, skip permission check (mainly for tests)
+			this.logger.appendLine(`[${new Date().toISOString()}] No extension context available, skipping permission check`);
+			return;
+		}
+
+		try {
+			const accessInfo = this.context.languageModelAccessInformation;
+			const canSend = accessInfo.canSendRequest(model);
+			
+			this.logger.appendLine(`[${new Date().toISOString()}] Permission check for ${model.id}: ${canSend}`);
+			
+			// If permission is explicitly false or unknown (undefined), try to trigger consent dialog
+			if (canSend !== true) {
+				this.logger.appendLine(`[${new Date().toISOString()}] Triggering permission consent dialog for ${model.id}...`);
+						// Try a minimal request to trigger the consent dialog
+				try {
+					const request = model.sendRequest(
+						[vscode.LanguageModelChatMessage.User('Hi')],
+						{ justification: 'Checking access permissions for model discovery' },
+						cancellationToken
+					);
+					
+					// Convert Thenable to Promise to handle errors properly
+					Promise.resolve(request).catch(() => {
+						// Ignore errors here as we're just trying to trigger the consent dialog
+					});
+					
+					// Wait a bit to allow the consent dialog to appear
+					await new Promise(resolve => setTimeout(resolve, 100));
+					
+				} catch (err: any) {
+					if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
+						// This is expected - throw it to let the caller handle the permission error properly
+						this.logger.appendLine(`[${new Date().toISOString()}] Permission denied for ${model.id}, throwing error for user handling`);
+						throw err;
+					}
+					// For other errors, just log and continue
+					this.logger.appendLine(`[${new Date().toISOString()}] Non-permission error during consent check: ${String(err)}`);
+				}
+			}
+		} catch (err) {
+			// Re-throw permission errors, but handle other errors gracefully
+			if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
+				throw err;
+			}
+			this.logger.appendLine(`[${new Date().toISOString()}] Error during permission check: ${String(err)}`);
+		}
 	}
 
 	buildModelSummary(models: ExtendedLanguageModelChat[], cancellationToken?: vscode.CancellationToken): Record<string, ModelSummary> {

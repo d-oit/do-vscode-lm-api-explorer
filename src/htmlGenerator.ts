@@ -7,7 +7,7 @@ import {
 
 export class HtmlGenerator {
 
-	static generateHtml(data: ModelExplorerData): string {
+	static generateHtml(data: ModelExplorerData, version: string): string {
 		return `
 <!DOCTYPE html>
 <html lang="en">
@@ -24,7 +24,7 @@ export class HtmlGenerator {
 	${this.generateModelsSection(data.models, data.sendResults)}
 	${this.generateRequestOptionsSection()}
 	${this.generateJsonSection(data)}
-	${this.generateFooter()}
+	${this.generateFooter(version)}
 	${this.generateToast()}
 	${this.generateScripts()}
 </body>
@@ -277,9 +277,8 @@ export class HtmlGenerator {
 		`;
 	}
 
-	private static generateFooter(): string {
-		// Hardcode version for now - in a real deployment this would come from bundled package.json
-		const version = '0.8.5';
+	private static generateFooter(version: string): string {
+		// Use version from package.json
 		
 		return `
 			<div style="text-align: center; margin-top: 3em; padding: 1em; border-top: 1px solid var(--vscode-panel-border); color: var(--vscode-descriptionForeground); font-size: 0.9em;">

@@ -94,7 +94,7 @@ suite('Extension Test Suite', () => {
 
 		setup(() => {
 			outputChannel = vscode.window.createOutputChannel('Test');
-			modelService = new ModelService(outputChannel);
+			modelService = new ModelService(outputChannel); // Context is optional for tests
 		});
 
 		teardown(() => {
@@ -166,7 +166,7 @@ suite('Extension Test Suite', () => {
 				}
 			};
 			
-			const html = HtmlGenerator.generateHtml(data);
+			const html = HtmlGenerator.generateHtml(data, 'test-version');
 			
 			assert.ok(html.includes('<!DOCTYPE html>'), 'Should be valid HTML document');
 			assert.ok(html.includes('Language Model Explorer'), 'Should contain title');
@@ -193,7 +193,7 @@ suite('Extension Test Suite', () => {
 				}
 			};
 			
-			const html = HtmlGenerator.generateHtml(data);
+			const html = HtmlGenerator.generateHtml(data, 'test-version');
 			
 			assert.ok(html.includes('❌'), 'Should contain error icon for unsupported model');
 			assert.ok(html.includes('Not Supported'), 'Should show not supported text');
@@ -207,7 +207,7 @@ suite('Extension Test Suite', () => {
 				sendResults: {}
 			};
 			
-			const html = HtmlGenerator.generateHtml(data);
+			const html = HtmlGenerator.generateHtml(data, 'test-version');
 			
 			assert.ok(html.includes('LanguageModelChatRequestOptions'), 'Should contain API documentation');
 			assert.ok(html.includes('justification'), 'Should contain justification parameter');
@@ -236,7 +236,7 @@ suite('Extension Test Suite', () => {
 				}
 			};
 			
-			const html = HtmlGenerator.generateHtml(data);
+			const html = HtmlGenerator.generateHtml(data, 'test-version');
 			
 			assert.ok(html.includes('Request Options Used'), 'Should show request options used section');
 			assert.ok(html.includes('Testing model capabilities for VS Code LM Explorer extension'), 'Should show actual justification used');
@@ -254,7 +254,7 @@ suite('Extension Test Suite', () => {
 				sendResults: {}
 			};
 			
-			const html = HtmlGenerator.generateHtml(data);
+			const html = HtmlGenerator.generateHtml(data, 'test-version');
 			
 			assert.ok(html.includes('&lt;script&gt;'), 'Should escape < and > in script tags');
 			assert.ok(html.includes('test&amp;vendor'), 'Should escape & in vendor name');
@@ -309,7 +309,7 @@ suite('Extension Test Suite', () => {
 				}
 			};
 			
-			const html = HtmlGenerator.generateHtml(data);
+			const html = HtmlGenerator.generateHtml(data, 'test-version');
 			
 			assert.ok(html.includes('⏭️'), 'Should contain skip icon for testSkipped model');
 			assert.ok(html.includes('Testing Skipped'), 'Should show testing skipped text');
@@ -334,7 +334,7 @@ suite('Extension Test Suite', () => {
 				}
 			};
 			
-			const html = HtmlGenerator.generateHtml(data);
+			const html = HtmlGenerator.generateHtml(data, 'test-version');
 			
 			assert.ok(!html.includes('Request Options Used'), 'Should not show request options when testSkipped');
 			assert.ok(!html.includes('Test Response'), 'Should not show test response when testSkipped');
