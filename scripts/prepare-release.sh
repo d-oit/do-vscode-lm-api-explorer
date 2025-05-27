@@ -24,10 +24,10 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
-# Check if we're on dev branch
+# Check if we're on main branch (for automated releases) or dev branch (for manual releases)
 current_branch=$(git rev-parse --abbrev-ref HEAD)
-if [ "$current_branch" != "dev" ]; then
-    print_error "You must be on the 'dev' branch to create a release"
+if [ "$current_branch" != "main" ] && [ "$current_branch" != "dev" ]; then
+    print_error "You must be on the 'main' or 'dev' branch to create a release"
     print_warning "Current branch: $current_branch"
     exit 1
 fi
