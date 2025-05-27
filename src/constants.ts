@@ -19,11 +19,10 @@ export const UI_TEXT = {
         TESTING: 'Testing AI model responses...',
         PREPARING: 'Preparing AI model explorer...',
         COMPLETE: 'AI Model Discovery Complete!'    },
-    
-    // Notifications
+      // Notifications
     NOTIFICATIONS: {
         SUCCESS: (count: number) => `🤖 Discovered ${count} AI models! Use the explorer to copy API parameters and test responses.`,
-        NO_MODELS: 'No AI models found. Please ensure GitHub Copilot Chat or another AI provider is enabled.',
+        NO_MODELS: 'No AI models found. Please ensure GitHub Copilot Chat is installed and you have granted permission to access language models. If this is your first time using the extension, try running the command again.',
         CACHE_CLEARED: 'AI Model Explorer cache cleared. Rediscovering models...',
         CANCELLED: 'AI model discovery was cancelled.',
         ERROR: (error: string) => `Failed to discover AI models: ${error}`,
@@ -175,7 +174,7 @@ export const DATES = {
 
 // Error Messages
 export const ERROR_MESSAGES = {
-    NO_MODELS: 'No language models available. Please ensure GitHub Copilot Chat or another provider is enabled.',
+    NO_MODELS: 'No language models available. Please ensure GitHub Copilot Chat is installed and you have granted permission to access language models. If this is your first time using the extension, try running the command again - VS Code should prompt you to grant permission.',
     FETCH_FAILED: (error: string) => `Failed to fetch language models: ${error}`,
     MODEL_NOT_SUPPORTED: 'Model is not supported',
     REQUEST_FAILED_400: 'Request Failed: 400'

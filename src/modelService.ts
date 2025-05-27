@@ -13,8 +13,7 @@ export class ModelService {
 
 	constructor(logger: vscode.OutputChannel) {
 		this.logger = logger;
-	}
-	async fetchModels(cancellationToken?: vscode.CancellationToken): Promise<ExtendedLanguageModelChat[]> {
+	}	async fetchModels(cancellationToken?: vscode.CancellationToken): Promise<ExtendedLanguageModelChat[]> {
 		this.logger.appendLine(`[${new Date().toISOString()}] Starting model fetch...`);
 
 		if (this._cachedModels) {
@@ -27,6 +26,7 @@ export class ModelService {
 		}
 
 		let models: ExtendedLanguageModelChat[] = [];
+		let permissionError: vscode.LanguageModelError | null = null;
 		
 		// First try to get Copilot models - this will trigger permission dialog if needed
 		this.logger.appendLine(`[${new Date().toISOString()}] Fetching Copilot models...`);
@@ -34,8 +34,12 @@ export class ModelService {
 		try {
 			models = await vscode.lm.selectChatModels({ vendor: 'copilot' }) as ExtendedLanguageModelChat[];
 			this.logger.appendLine(`[${new Date().toISOString()}] Found ${models.length} Copilot models`);
-		} catch (err) {
+		} catch (err: any) {
 			this.logger.appendLine(`[${new Date().toISOString()}] Error fetching Copilot models: ${String(err)}`);
+			// If it's a permission error, save it but try all models first to be thorough
+			if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
+				permissionError = err;
+			}
 			models = [];
 		}
 
@@ -53,10 +57,9 @@ export class ModelService {
 			} catch (err) {
 				this.logger.appendLine(`[${new Date().toISOString()}] Error fetching all models: ${String(err)}`);
 				
-				// Only throw if it's a real error, not a permission issue that VS Code should handle
+				// If this is also a permission error, save it
 				if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
-					// This should trigger the permission dialog - let VS Code handle it
-					throw err;
+					permissionError = err;
 				}
 				
 				models = []; // Set to empty array instead of throwing
@@ -67,6 +70,13 @@ export class ModelService {
 			throw new vscode.CancellationError();
 		}
 
+		// If no models found and we have a permission error, throw it to trigger VS Code's permission dialog
+		if ((!models || models.length === 0) && permissionError) {
+			this.logger.appendLine(`[${new Date().toISOString()}] No models available, re-throwing permission error to trigger consent dialog`);
+			throw permissionError;
+		}
+
+		// If no models and no permission error, show the user-friendly message
 		if (!models || models.length === 0) {
 			throw new Error(ERROR_MESSAGES.NO_MODELS);
 		}

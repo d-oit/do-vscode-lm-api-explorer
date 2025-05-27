@@ -182,29 +182,38 @@ export function activate(context: vscode.ExtensionContext) {
 					// Handle LanguageModelError.NoPermissions specifically to trigger permission dialog
 					if (err instanceof vscode.LanguageModelError && err.code === vscode.LanguageModelError.NoPermissions.name) {
 						vscode.window.showInformationMessage(
-							'Language model access permission is required. Please run the command again and click "Allow" when prompted to grant access to language models.',
-							'Try Again'
+							'🔐 Language model access permission required. Please click "Allow" when prompted to grant access to GitHub Copilot Chat language models.',
+							'Try Again',
+							'Setup Guide'
 						).then(selection => {
 							if (selection === 'Try Again') {
 								vscode.commands.executeCommand(COMMANDS.DISCOVER_MODELS);
+							} else if (selection === 'Setup Guide') {
+								vscode.env.openExternal(vscode.Uri.parse(URLS.COPILOT_SETUP_GUIDE));
 							}
 						});
 					} else if (err.message?.includes('No language models available')) {
 						vscode.window.showWarningMessage(
 							UI_TEXT.NOTIFICATIONS.NO_MODELS,
+							'Try Again',
 							UI_TEXT.BUTTONS.SETUP_GUIDE
 						).then(selection => {
-							if (selection === UI_TEXT.BUTTONS.SETUP_GUIDE) {
+							if (selection === 'Try Again') {
+								vscode.commands.executeCommand(COMMANDS.DISCOVER_MODELS);
+							} else if (selection === UI_TEXT.BUTTONS.SETUP_GUIDE) {
 								vscode.env.openExternal(vscode.Uri.parse(URLS.COPILOT_SETUP_GUIDE));
 							}
 						});
 					} else if (err.message?.includes('Language model access permission not granted')) {
 						vscode.window.showInformationMessage(
-							'Language model access permission is required. Please run the command again and click "Allow" when prompted to grant access to language models.',
-							'Try Again'
+							'🔐 Language model access permission required. Please click "Allow" when prompted to grant access to language models.',
+							'Try Again',
+							'Setup Guide'
 						).then(selection => {
 							if (selection === 'Try Again') {
 								vscode.commands.executeCommand(COMMANDS.DISCOVER_MODELS);
+							} else if (selection === 'Setup Guide') {
+								vscode.env.openExternal(vscode.Uri.parse(URLS.COPILOT_SETUP_GUIDE));
 							}
 						});
 					} else if (err instanceof ModelNotSupportedError) {
