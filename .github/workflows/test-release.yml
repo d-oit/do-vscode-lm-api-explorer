@@ -1,0 +1,83 @@
+name: Test Release Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      skip_tests_before_versioning:
+        description: 'Skip tests before versioning'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  test_version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for changeset files
+        id: check-changesets
+        run: |
+          if [ -d ".changeset" ] && [ "$(find .changeset -name "*.md" -not -name "README.md" | wc -l)" -gt 0 ]; then
+            echo "has-changesets=true" >> $GITHUB_OUTPUT
+            echo "Found changeset files."
+          else
+            echo "has-changesets=false" >> $GITHUB_OUTPUT
+            echo "No changeset files found."
+          fi
+
+      - name: Determine processing logic
+        id: should-process
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger detected, will process changesets."
+            SHOULD_PROCESS_CHANGESETS=true
+          elif [ "${{ steps.check-changesets.outputs.has-changesets }}" = "true" ]; then
+            echo "Changesets found on push to main, will process."
+            SHOULD_PROCESS_CHANGESETS=true
+          else
+            echo "No changesets to process for this event."
+            SHOULD_PROCESS_CHANGESETS=false
+          fi
+          echo "should-process-changesets=$SHOULD_PROCESS_CHANGESETS" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        if: steps.should-process.outputs.should-process-changesets == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.should-process.outputs.should-process-changesets == 'true'
+        run: npm ci
+
+      - name: Configure Git
+        if: steps.should-process.outputs.should-process-changesets == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action (Versioning)"
+
+      - name: Test Summary
+        if: steps.should-process.outputs.should-process-changesets == 'true'
+        run: |
+          echo "## Test Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Inputs: version_type=${{ inputs.version_type }}, skip_tests=${{ inputs.skip_tests_before_versioning }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Has changesets: ${{ steps.check-changesets.outputs.has-changesets }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Should process: ${{ steps.should-process.outputs.should-process-changesets }}" >> $GITHUB_STEP_SUMMARY
