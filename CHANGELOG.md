@@ -3,6 +3,11 @@
 All notable changes to the "do-vscode-lm-explorer" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## [0.8.0] - 2025-05-27
+
+### Changed
+
+
 ## [0.7.0] - 2025-05-27
 
 ### Fixed
