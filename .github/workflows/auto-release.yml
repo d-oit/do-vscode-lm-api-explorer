@@ -115,6 +115,8 @@ jobs:
           VERSION_TYPE="${{ inputs.version_type || 'auto' }}"
           echo "version-type=$VERSION_TYPE" >> $GITHUB_OUTPUT
           echo "Using version type: $VERSION_TYPE"
+        outputs:
+          version-type: ${{ steps.version-type.outputs.version-type }}
 
       - name: Process changesets and create release
         id: changeset-release
@@ -123,9 +125,14 @@ jobs:
           
           # Determine which command to run based on version type
           VERSION_TYPE="${{ steps.version-type.outputs.version-type }}"
-            if [ "$VERSION_TYPE" = "auto" ]; then
+          if [ "$VERSION_TYPE" = "auto" ]; then
             echo "Running auto-detected changeset release..."
-            npm run changeset:full-release-auto
+            if npm run | grep -q "changeset:full-release-auto"; then
+              npm run changeset:full-release-auto
+            else
+              echo "Error: changeset:full-release-auto script not found in package.json"
+              exit 1
+            fi
           else
             echo "Running manual changeset release with type: $VERSION_TYPE"
             bash ./scripts/changelog-manager.sh -c full-release -t "$VERSION_TYPE"
