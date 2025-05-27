@@ -327,22 +327,54 @@ update_changelog() {
     if [ -d "$CHANGESET_DIR" ]; then
         for changeset_file in "$CHANGESET_DIR"/*.md; do
             if [ -f "$changeset_file" ] && [ "$(basename "$changeset_file")" != "README.md" ]; then
-                local type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2)
-                local category="Changed"
+                local type=""
+                local category="Fixed"
+                local description=""
                 
-                case "$type" in
-                    "feature") category="Added" ;;
-                    "enhancement") category="Changed" ;;
-                    "fix") category="Fixed" ;;
-                    "breaking") category="Changed" ;;
-                    "security") category="Security" ;;
-                    "deprecation") category="Deprecated" ;;
-                    "removal") category="Removed" ;;
-                esac
+                # Check if it's new YAML frontmatter format
+                if grep -q "^---$" "$changeset_file"; then
+                    # Extract from YAML frontmatter format
+                    local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | grep -E '^\s*".*":\s*(patch|minor|major|fix|feature|breaking)')
+                    if echo "$yaml_content" | grep -q "patch\|fix"; then
+                        type="fix"
+                        category="Fixed"
+                    elif echo "$yaml_content" | grep -q "minor\|feature"; then
+                        type="feature" 
+                        category="Added"
+                    elif echo "$yaml_content" | grep -q "major\|breaking"; then
+                        type="breaking"
+                        category="Changed"
+                    fi
+                    
+                    # Extract description from content after frontmatter
+                    description=$(sed -n '/^---$/,$p' "$changeset_file" | tail -n +2 | sed '/^---$/d' | sed '/^$/d' | head -1)
+                else
+                    # Old format - extract type and description
+                    type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2)
+                    description=$(grep "^description:" "$changeset_file" | cut -d' ' -f2-)
+                    
+                    case "$type" in
+                        "feature") category="Added" ;;
+                        "enhancement") category="Changed" ;;
+                        "fix") category="Fixed" ;;
+                        "breaking") category="Changed" ;;
+                        "security") category="Security" ;;
+                        "deprecation") category="Deprecated" ;;
+                        "removal") category="Removed" ;;
+                    esac
+                fi
                 
-                # Extract changes from changeset
+                # Extract changes from changeset (both formats can have - bullets)
                 local changes=$(grep "^- " "$changeset_file" | while read line; do echo "$line"; done)
-                grouped_changes["$category"]+="$changes"$'\n'
+                
+                # If no bullet points found, use the description as a change
+                if [ -z "$changes" ] && [ -n "$description" ]; then
+                    changes="- $description"
+                fi
+                
+                if [ -n "$changes" ]; then
+                    grouped_changes["$category"]+="$changes"$'\n'
+                fi
             fi
         done
     fi
@@ -434,7 +466,24 @@ show_changeset_status() {
     declare -A type_files
     
     for changeset_file in "${changeset_files[@]}"; do
-        local type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
+        local type=""
+        
+        # Check if it's new YAML frontmatter format
+        if grep -q "^---$" "$changeset_file"; then
+            # Extract from YAML frontmatter format
+            local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | grep -E '^\s*".*":\s*(patch|minor|major|fix|feature|breaking)')
+            if echo "$yaml_content" | grep -q "patch\|fix"; then
+                type="fix"
+            elif echo "$yaml_content" | grep -q "minor\|feature"; then
+                type="feature"
+            elif echo "$yaml_content" | grep -q "major\|breaking"; then
+                type="breaking"
+            fi
+        else
+            # Old format
+            type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
+        fi
+        
         if [ -n "$type" ]; then
             type_counts["$type"]=$((${type_counts["$type"]} + 1))
             if [ -z "${type_files["$type"]}" ]; then
@@ -460,9 +509,31 @@ show_changeset_status() {
     echo -e "\n${CYAN}Changeset details:${NC}"
     for changeset_file in "${changeset_files[@]}"; do
         local filename=$(basename "$changeset_file")
-        local type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
-        local description=$(grep "^description:" "$changeset_file" | cut -d' ' -f2- | tr -d '\r')
-        local date=$(grep "^date:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
+        local type=""
+        local description=""
+        local date=""
+        
+        # Check if it's new YAML frontmatter format
+        if grep -q "^---$" "$changeset_file"; then
+            # Extract from YAML frontmatter format
+            local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | grep -E '^\s*".*":\s*(patch|minor|major|fix|feature|breaking)')
+            if echo "$yaml_content" | grep -q "patch\|fix"; then
+                type="fix"
+            elif echo "$yaml_content" | grep -q "minor\|feature"; then
+                type="feature"
+            elif echo "$yaml_content" | grep -q "major\|breaking"; then
+                type="breaking"
+            fi
+            
+            # Extract description from content after frontmatter
+            description=$(sed -n '/^---$/,$p' "$changeset_file" | tail -n +2 | sed '/^---$/d' | sed '/^$/d' | head -1)
+            date="N/A (YAML format)"
+        else
+            # Old format
+            type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
+            description=$(grep "^description:" "$changeset_file" | cut -d' ' -f2- | tr -d '\r')
+            date=$(grep "^date:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
+        fi
         
         echo -e "  ${YELLOW}$filename${NC}"
         echo -e "    Type: $type"
@@ -530,7 +601,24 @@ process_ci_release() {
         
         for changeset_file in "$CHANGESET_DIR"/*.md; do
             if [ -f "$changeset_file" ] && [ "$(basename "$changeset_file")" != "README.md" ]; then
-                local type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
+                local type=""
+                
+                # Check if it's new YAML frontmatter format
+                if grep -q "^---$" "$changeset_file"; then
+                    # Extract from YAML frontmatter format
+                    local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file" | grep -E '^\s*".*":\s*(patch|minor|major|fix|feature|breaking)')
+                    if echo "$yaml_content" | grep -q "major\|breaking"; then
+                        type="breaking"
+                    elif echo "$yaml_content" | grep -q "minor\|feature"; then
+                        type="feature"
+                    elif echo "$yaml_content" | grep -q "patch\|fix"; then
+                        type="fix"
+                    fi
+                else
+                    # Old format
+                    type=$(grep "^type:" "$changeset_file" | cut -d' ' -f2 | tr -d '\r')
+                fi
+                
                 case "$type" in
                     "breaking"|"major") has_breaking=true ;;
                     "feature"|"enhancement") has_features=true ;;
