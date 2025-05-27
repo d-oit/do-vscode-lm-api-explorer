@@ -476,7 +476,7 @@ show_changeset_status() {
             while IFS= read -r change; do
                 echo -e "      $change"
             done <<< "$changes"
-        fi
+            fi
         echo
     done
     
@@ -723,10 +723,10 @@ case "$COMMAND" in
         # Update package version
         update_package_version "$VERSION"
         
-        # Run prepare-release if it exists
-        if [ -f "scripts/prepare-release.sh" ]; then
-            bash "scripts/prepare-release.sh"
-        fi
+        # Removed the call to prepare-release.sh as it conflicts with the CI/CD workflow
+        # if [ -f "scripts/prepare-release.sh" ]; then
+        #     bash "scripts/prepare-release.sh"
+        # fi
         
         echo -e "\n${GREEN}Full release $VERSION completed!${NC}"
         echo -e "${YELLOW}Ready to commit and tag the release.${NC}"
