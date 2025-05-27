@@ -615,9 +615,6 @@ process_ci_release() {
                 if grep -q "^---$" "$changeset_file"; then
                     # Extract from YAML frontmatter format - look for package name with version type
                     local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
-<<<<<<< Updated upstream
-                    if echo "$yaml_content" | grep -q ': major'; then
-=======
                     # Look for package-scoped version declarations first
                     if echo "$yaml_content" | grep -q '"do-vscode-lm-explorer": major\|"do-vscode-lm-explorer": "major"'; then
                         type="breaking"
@@ -627,7 +624,6 @@ process_ci_release() {
                         type="fix"
                     # Fallback to generic type declarations
                     elif echo "$yaml_content" | grep -q ': major'; then
->>>>>>> Stashed changes
                         type="breaking"
                     elif echo "$yaml_content" | grep -q ': minor'; then
                         type="feature"
@@ -872,19 +868,19 @@ case "$COMMAND" in
                 echo -e "${CYAN}Auto-detecting change type from changesets...${NC}"
                 
                 # Check changesets for breaking changes or features first
-                local has_breaking=false
-                local has_features=false
-                local has_patches=false
+                has_breaking=false
+                has_features=false
+                has_patches=false
                 
                 if [ -d "$CHANGESET_DIR" ]; then
                     for changeset_file in "$CHANGESET_DIR"/*.md; do
                         if [ -f "$changeset_file" ] && [ "$(basename "$changeset_file")" != "README.md" ]; then
-                            local type=""
+                            type=""
                             
                             # Check if it's new YAML frontmatter format
                             if grep -q "^---$" "$changeset_file"; then
                                 # Extract from YAML frontmatter format - look for package name with version type
-                                local yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
+                                yaml_content=$(sed -n '/^---$/,/^---$/p' "$changeset_file")
                                 if echo "$yaml_content" | grep -q ': major'; then
                                     type="breaking"
                                 elif echo "$yaml_content" | grep -q ': minor'; then

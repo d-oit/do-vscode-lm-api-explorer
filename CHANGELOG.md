@@ -3,6 +3,10 @@
 All notable changes to the "do-vscode-lm-explorer" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## [0.8.3] - 2025-05-27
+
+### Fixed
+- Fix changelog manager to correctly handle modern YAML frontmatter and version type detection
 
 ## [0.8.1] - 2025-05-27
 
