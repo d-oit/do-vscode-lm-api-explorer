@@ -13,6 +13,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Enhanced diagnostic logging for model permission status without triggering consent dialogs
 - Removed problematic permission checking during model discovery that interfered with natural consent flow
 
+## [0.8.0] - 2025-05-27
+
 ### Changed
 - ModelService constructor now accepts optional ExtensionContext parameter for permission diagnostics
 - Permission consent dialogs now appear naturally when users test models rather than during discovery

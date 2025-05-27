@@ -1,4 +1,4 @@
-name: Test
+name: Run Lint, Type Check, and Tests
 
 on:
   push:
