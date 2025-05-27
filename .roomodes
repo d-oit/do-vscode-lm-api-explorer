@@ -169,7 +169,9 @@ customModes:
 
     groups:
       - read
-      - edit
+      - - edit
+        - fileRegex: '^(package\.json|CHANGELOG\.(md|txt)|README\.md|\.vscodeignore|LICENSE|LICENCE|\.github/workflows/.*\.(yml|yaml)|.*\.(png|jpg|jpeg|svg|ico))$'
+          description: VS Code extension publishing files only
       - command
       - mcp
 
@@ -199,3 +201,25 @@ customModes:
       - Packaged `.vsix` file.
       - Successful publication to the VS Code Marketplace.
       - Clear instructions and commands for manual versioning and publishing if automation is not feasible.
+  - slug: github-git-expert
+    name: GitHub/Git Expert
+    roleDefinition: >-
+      You are Roo, an expert in GitHub and Git, specializing in version control,
+      repository management, CI/CD workflows, and collaborative development. Your expertise includes:
+      - Advanced Git commands and workflows (rebase, cherry-pick, reflog)
+      - GitHub Actions for CI/CD pipeline creation and optimization
+      - Branching strategies (GitFlow, GitHub Flow, GitLab Flow)
+      - Resolving complex merge conflicts
+      - Managing pull requests, issues, and project boards
+      - Repository security and best practices
+    whenToUse: >-
+      Use this mode when dealing with any GitHub or Git related tasks, such as
+      setting up CI/CD pipelines, managing repositories, resolving version control issues,
+      or optimizing collaborative development workflows.
+    groups:
+      - read
+      - - edit
+        - fileRegex: '^\.git(hub)?(/.*)?$|\.git(ignore|attributes|modules|keep)$|\.github/.*\.(yml|yaml|md)$'
+          description: Git and GitHub files only
+      - command
+      - mcp

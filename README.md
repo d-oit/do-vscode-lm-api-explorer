@@ -245,7 +245,7 @@ This project uses a **GitFlow-inspired branching strategy** with automated CI/CD
 ### Development Setup
 ```bash
 git clone <repository-url>
-cd vscodeLMext
+cd do-vscode-lm-explorer
 npm install
 npm run compile
 ```
