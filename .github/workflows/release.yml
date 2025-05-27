@@ -1,49 +1,25 @@
 name: Release
 
-# GitHub Actions workflow for automated testing and publishing
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*' # Trigger on tags like v1.0.0
-  workflow_dispatch: # Keep manual trigger as an option
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v1.0.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
   packages: write
-  pull-requests: write
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    uses: ./.github/workflows/test.yml
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Start Xvfb
-        run: Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Compile extension and tests
-        run: npm run pretest
-
-      - name: Run linting
-        run: npm run lint
-        
-      - name: Run tests
-        run: npm test
-        env:
-          CI: true
-          DISPLAY: :99
-
-  release:
+  build-and-release:
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -74,22 +50,17 @@ jobs:
         id: package-version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Get package name
-        id: package-name
-        run: echo "name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
-        
       - name: Create GitHub Release
-        id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.package-version.outputs.version }}
           name: Release v${{ steps.package-version.outputs.version }}
-          files: |
-            *.vsix
+          files: '*.vsix'
           generate_release_notes: true
           draft: false
-          prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: ${{ contains(steps.package-version.outputs.version, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to VS Code Marketplace
         run: vsce publish --no-dependencies

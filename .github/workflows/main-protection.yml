@@ -12,7 +12,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0      - name: Check if PR is from dev branch
+          fetch-depth: 0
+
+      - name: Check if PR is from dev branch
         run: |
           if [ "${{ github.head_ref }}" != "dev" ]; then
             echo "❌ Pull requests to main branch must come from dev branch only"
@@ -22,42 +24,14 @@ jobs:
             echo "✅ Pull request is from dev branch - proceeding"
           fi
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run full test suite
-        run: npm test
-
-      - name: Run linting
-        run: npm run lint
-
-      - name: Type checking
-        run: npm run check-types
-
-      - name: Build and package
-        run: |
-          npm run package
-          npm install -g @vscode/vsce
-          vsce package
-
       - name: Validate version bump
         run: |
-          # Get current version from package.json
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          
-          # Get the latest git tag (if any)
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
           
           echo "Current version: $CURRENT_VERSION"
           echo "Latest tag: $LATEST_TAG"
           
-          # Compare versions using node
           COMPARISON=$(node -e "
             const semver = require('semver');
             const current = '$CURRENT_VERSION';
@@ -68,7 +42,8 @@ jobs:
               console.log('invalid');
             }
           " 2>/dev/null || echo "valid")
-            if [ "$COMPARISON" != "valid" ]; then
+          
+          if [ "$COMPARISON" != "valid" ]; then
             echo "❌ Version must be bumped before merging to main"
             echo "Current: $CURRENT_VERSION, Latest: $LATEST_TAG"
             exit 1
