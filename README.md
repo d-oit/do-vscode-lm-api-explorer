@@ -196,6 +196,8 @@ npm test
 
 ### 📦 Install from VS Code Marketplace
 
+TODO: not published yet - this was only a test to try out how it works!
+
 The easiest way to get started is to install the extension directly from the Visual Studio Code Marketplace:
 
 1.  Open VS Code.
