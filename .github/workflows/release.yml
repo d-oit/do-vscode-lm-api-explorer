@@ -4,16 +4,136 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type (for manual changeset processing)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+      skip_tests_before_versioning:
+        description: 'Skip tests before versioning (not recommended)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: read
 
 jobs:
-  test-extension:
-    name: Run VS Code Extension Tests
+  version_and_tag:
     runs-on: ubuntu-latest
-
+    outputs:
+      version_changed: ${{ steps.version-check.outputs.version-changed }}
+      new_version: ${{ steps.changeset-process.outputs.new-version }}
+      new_tag_name: ${{ steps.commit-and-tag.outputs.tag-created }}
+      has_changesets: ${{ steps.check-changesets.outputs.has-changesets }}
+      should_process_changesets: ${{ steps.should-process.outputs.should-process-changesets }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout code (for versioning)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for changeset files
+        id: check-changesets
+        run: |
+          if [ -d ".changeset" ] && [ "$(find .changeset -name "*.md" -not -name "README.md" | wc -l)" -gt 0 ]; then
+            echo "has-changesets=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-changesets=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine if changesets should be processed
+        id: should-process
+        run: |
+          SHOULD_PROCESS_CHANGESETS=false
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SHOULD_PROCESS_CHANGESETS=true
+          elif [ "${{ steps.check-changesets.outputs.has-changesets }}" = "true" ]; then
+            SHOULD_PROCESS_CHANGESETS=true
+          fi
+          echo "should-process-changesets=$SHOULD_PROCESS_CHANGESETS" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js (for versioning)
+        if: steps.should-process.outputs.should-process-changesets == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies (for versioning)
+        if: steps.should-process.outputs.should-process-changesets == 'true'
+        run: npm ci
+
+      - name: Configure Git
+        if: steps.should-process.outputs.should-process-changesets == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action (Versioning)"
+
+      - name: Run tests before versioning (optional)
+        if: steps.should-process.outputs.should-process-changesets == 'true' && inputs.skip_tests_before_versioning != true && github.event_name == 'workflow_dispatch'
+        run: xvfb-run --auto-servernum npm test
+
+      - name: Process changesets and update version/changelog
+        if: steps.should-process.outputs.should-process-changesets == 'true'
+        id: changeset-process
+        env:
+          MANUAL_VERSION_TYPE: ${{ inputs.version_type }}
+        run: |
+          set -e
+          VERSION_TYPE_TO_USE="$MANUAL_VERSION_TYPE"
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "$MANUAL_VERSION_TYPE" = "auto" ]; then
+            npm run changeset:full-release-auto
+          else
+            bash ./scripts/changelog-manager.sh -c full-release -t "$VERSION_TYPE_TO_USE"
+          fi
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if version/changelog changed
+        if: steps.should-process.outputs.should-process-changesets == 'true'
+        id: version-check
+        run: |
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "version-changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "version-changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit version and changelog changes, and create tag
+        if: steps.version-check.outputs.version-changed == 'true'
+        id: commit-and-tag
+        run: |
+          NEW_VERSION="${{ steps.changeset-process.outputs.new-version }}"
+          TAG_NAME="v$NEW_VERSION"
+          git add -A
+          git commit -m "chore: release $TAG_NAME [skip ci]"
+          git tag "$TAG_NAME"
+          for i in 1 2 3; do
+            git push origin main && git push origin "$TAG_NAME" && break
+            sleep 5
+          done
+          echo "tag-created=$TAG_NAME" >> $GITHUB_OUTPUT
+
+  build_and_publish:
+    needs: version_and_tag
+    if: needs.version_and_tag.outputs.version_changed == 'true' && needs.version_and_tag.outputs.should_process_changesets == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code at new tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version_and_tag.outputs.new_tag_name }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -21,11 +141,52 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm ci
 
       - name: Install xvfb
         run: sudo apt-get update && sudo apt-get install -y xvfb
 
-      - name: Run VS Code Extension Tests
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" npm test
+      - name: Run linting
+        run: npm run lint
+
+      - name: Type checking
+        run: npm run check-types
+
+      - name: Run tests (on tagged commit)
+        run: xvfb-run --auto-servernum npm test
+
+      - name: Install VSCE
+        run: npm install -g vsce
+
+      - name: Build VSIX package
+        id: build-vsix
+        run: |
+          vsce package
+          VSIX_FILE=$(find . -name "*.vsix" | head -n 1)
+          echo "vsix_file_path=$VSIX_FILE" >> $GITHUB_OUTPUT
+          echo "vsix_file_name=$(basename $VSIX_FILE)" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.build-vsix.outputs.vsix_file_path }}
+          name: "Release ${{ needs.version_and_tag.outputs.new_version }}"
+          tag_name: ${{ needs.version_and_tag.outputs.new_tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check VSCE_PAT availability
+        id: check_vsce_pat
+        run: |
+          if [ -n "${{ secrets.VSCE_PAT }}" ]; then
+            echo "is_set=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_set=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to VS Code Marketplace
+        if: steps.check_vsce_pat.outputs.is_set == 'true'
+        run: vsce publish -p ${{ secrets.VSCE_PAT }} --packagePath ${{ steps.build-vsix.outputs.vsix_file_path }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
