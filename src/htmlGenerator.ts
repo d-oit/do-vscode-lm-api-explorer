@@ -535,6 +535,6 @@ export class HtmlGenerator {
 	}
 
 	private static escapeHtml(str: string): string {
-		return str.replace(/[&<>]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[tag] || tag));
+		return str.replace(/[&<>"']/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[tag] || tag));
 	}
 }
