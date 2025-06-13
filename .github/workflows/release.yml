@@ -191,8 +191,8 @@ jobs:
       - name: Type checking
         run: npm run check-types
 
-      - name: Run tests (on tagged commit)
-        run: xvfb-run --auto-servernum npm test
+      - name: Run VS Code Extension Tests
+        run: xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' npm test
 
       - name: Install VSCE
         run: npm install -g vsce
