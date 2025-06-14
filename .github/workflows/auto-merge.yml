@@ -1,23 +1,44 @@
 name: Auto-merge Dependabot PRs
+
 on:
   pull_request:
     types: [opened, ready_for_review]
     branches: [main]
+
 jobs:
   auto-merge:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Enable auto-merge
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const response = await github.rest.pulls.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              merge_method: 'squash'
-            });
-            if (!response.data.merged) {
-              throw new Error('Failed to enable auto-merge: ' + response.data.message);
+            try {
+              const response = await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                merge_method: 'squash'
+              });
+              
+              if (response.data.merged) {
+                console.log('✅ Pull request merged successfully');
+              } else {
+                console.log('⚠️ Pull request was not merged, but no error occurred');
+              }
+            } catch (error) {
+              // Handle common errors gracefully
+              if (error.status === 405) {
+                console.log('⚠️ Pull request cannot be merged (may not be mergeable)');
+              } else if (error.status === 409) {
+                console.log('⚠️ Pull request has conflicts that need to be resolved');
+              } else {
+                console.error('❌ Failed to merge pull request:', error.message);
+                throw error;
+              }
             }
