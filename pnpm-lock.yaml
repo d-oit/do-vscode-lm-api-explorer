@@ -33,7 +33,7 @@ importers:
         specifier: ^0.25.5
         version: 0.25.5
       eslint:
-        specifier: ^9.25.1
+        specifier: ^9.30.0
         version: 9.30.0
       glob:
         specifier: ^11.0.2
