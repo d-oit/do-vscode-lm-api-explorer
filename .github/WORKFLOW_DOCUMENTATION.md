@@ -4,7 +4,7 @@ This document details the comprehensive CI/CD pipelines and release processes fo
 
 ## Workflow Architecture
 
-The project uses GitHub Actions for CI/CD with six primary workflows:
+The project uses GitHub Actions for CI/CD with seven primary workflows:
 
 ### 1. **Test Workflow** (`test.yml`)
 - **Triggers**: Push to `dev`/`main`, Pull requests
@@ -38,7 +38,19 @@ The project uses GitHub Actions for CI/CD with six primary workflows:
   - VS Code Marketplace publishing
   - Comprehensive error handling
 
-### 4. **Auto-merge Dependabot** (`auto-merge.yml`)
+### 4. **Auto-sync Dev to Main** (`auto-sync-dev-to-main.yml`)
+- **Triggers**: Push to `dev`, Manual dispatch
+- **Purpose**: Automated branch synchronization following best practices
+- **Best Practice Features**:
+  - Meaningful change detection (excludes docs/config)
+  - Version bump requirement validation
+  - Complete test suite execution before sync
+  - Automated PR creation and merging
+  - Comprehensive audit trail and logging
+  - Multi-layered safety checks
+  - Fail-safe mechanisms with manual override
+
+### 5. **Auto-merge Dependabot** (`auto-merge.yml`)
 - **Triggers**: Dependabot PRs
 - **Purpose**: Automated dependency updates
 - **Safety Features**:
@@ -48,7 +60,7 @@ The project uses GitHub Actions for CI/CD with six primary workflows:
   - Manual review required for major updates
   - Failure notifications
 
-### 5. **Issue Summary** (`summary.yml`)
+### 6. **Issue Summary** (`summary.yml`)
 - **Triggers**: New issues opened
 - **Purpose**: Automated issue management
 - **Features**:
@@ -57,7 +69,7 @@ The project uses GitHub Actions for CI/CD with six primary workflows:
   - Welcome message for new issues
   - Error handling with fallback
 
-### 6. **Test Release** (`test-release.yml`)
+### 7. **Test Release** (`test-release.yml`)
 - **Triggers**: Manual dispatch only
 - **Purpose**: Release workflow testing
 - **Features**:
@@ -92,21 +104,25 @@ hotfix/*             <- Emergency fixes
    git commit -m "feat: add new feature"
    ```
 
-2. **Create Changeset**:
+2. **Version Bump**:
    ```bash
-   npm run changeset:create
-   # Follow interactive prompts
+   npm run release:prepare
+   # This bumps version in package.json
    ```
 
-3. **Create Release PR**:
+3. **Push to Dev**:
    ```bash
    git push origin dev
-   # Create PR from dev -> main
+   # Auto-sync workflow automatically handles the rest
    ```
 
-4. **Automatic Release**:
-   - PR merge triggers release workflow
-   - Version bump, tagging, and publishing happen automatically
+4. **Automatic Release Flow**:
+   - Auto-sync detects meaningful changes and version bump
+   - Runs complete test suite automatically
+   - Creates PR from dev to main with detailed summary
+   - Auto-merges PR if all checks pass
+   - Release workflow triggers automatically
+   - Version tagging and publishing happen automatically
 
 ### Manual Release (Emergency)
 1. **Version Preparation**:

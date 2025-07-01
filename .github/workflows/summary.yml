@@ -22,39 +22,44 @@ jobs:
       - name: Generate issue summary
         id: summary
         run: |
-          # Create a simple summary based on issue content
-          TITLE="${{ github.event.issue.title }}"
-          BODY="${{ github.event.issue.body }}"
-          AUTHOR="${{ github.event.issue.user.login }}"
+          # Safely read issue data using jq
+          TITLE=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
+          BODY=$(jq -r '.issue.body // ""' "$GITHUB_EVENT_PATH")
+          AUTHOR=$(jq -r '.issue.user.login' "$GITHUB_EVENT_PATH")
           
-          # Truncate body if too long
+          # Truncate body safely
           BODY_TRUNCATED=$(echo "$BODY" | head -c 500)
           if [ ${#BODY} -gt 500 ]; then
             BODY_TRUNCATED="$BODY_TRUNCATED..."
           fi
           
-          # Generate summary
+          # Generate summary with safe formatting
           SUMMARY="**Issue Summary**
-          
+
           **Title:** $TITLE
           **Author:** @$AUTHOR
           **Created:** $(date -u +"%Y-%m-%d %H:%M UTC")
-          
+
           **Description:**
           $BODY_TRUNCATED
-          
+
           ---
           *This summary was automatically generated. Please review the full issue content above.*"
           
-          # Save summary to file to handle multiline content
+          # Securely write summary to file
           echo "$SUMMARY" > /tmp/issue_summary.md
           echo "summary_file=/tmp/issue_summary.md" >> $GITHUB_OUTPUT
 
       - name: Add labels based on content
         id: labeling
         run: |
-          TITLE_LOWER=$(echo "${{ github.event.issue.title }}" | tr '[:upper:]' '[:lower:]')
-          BODY_LOWER=$(echo "${{ github.event.issue.body }}" | tr '[:upper:]' '[:lower:]')
+          # Read sanitized input directly from event payload
+          TITLE=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
+          BODY=$(jq -r '.issue.body // ""' "$GITHUB_EVENT_PATH")
+          
+          # Convert to lowercase safely
+          TITLE_LOWER=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]')
+          BODY_LOWER=$(echo "$BODY" | tr '[:upper:]' '[:lower:]')
           CONTENT="$TITLE_LOWER $BODY_LOWER"
           
           LABELS=()

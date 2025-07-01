@@ -38,10 +38,47 @@ export interface SendResult {
 		cause?: any;
 	};
 	error?: string | undefined;
+	testSkipped?: boolean;
+	customTest?: boolean;
+	responseTime?: number;
+	tokenCount?: {
+		input?: number;
+		output?: number;
+	};
+}
+
+export interface CustomTestRequest {
+	prompt: string;
+	modelIds: string[];
+	options?: {
+		temperature?: number;
+		maxTokens?: number;
+		justification?: string;
+	};
+}
+
+export interface ModelComparison {
+	prompt: string;
+	results: Record<string, SendResult>;
+	timestamp: number;
+	summary: {
+		fastest: string;
+		slowest: string;
+		averageResponseTime: number;
+		successCount: number;
+		errorCount: number;
+	};
 }
 
 export interface ModelExplorerData {
 	models: ExtendedLanguageModelChat[];
 	modelJson: Record<string, ModelSummary>;
 	sendResults: Record<string, SendResult>;
+	comparisons?: ModelComparison[];
+	filters?: {
+		vendor?: string;
+		family?: string;
+		searchTerm?: string;
+		supportedOnly?: boolean;
+	};
 }
