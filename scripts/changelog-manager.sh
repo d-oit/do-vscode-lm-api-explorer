@@ -312,9 +312,6 @@ update_changelog() {
     # Read existing changelog
     local changelog_content=$(cat "$CHANGELOG_FILE")
     
-    # Process changesets
-    local new_entry="\n## [$new_version] - $current_date"
-    
     # Group changes by type
     declare -A grouped_changes
     grouped_changes["Added"]=""
@@ -323,6 +320,8 @@ update_changelog() {
     grouped_changes["Removed"]=""
     grouped_changes["Security"]=""
     grouped_changes["Deprecated"]=""
+    
+    local has_changes=false
     
     if [ -d "$CHANGESET_DIR" ]; then
         for changeset_file in "$CHANGESET_DIR"/*.md; do
@@ -378,11 +377,20 @@ update_changelog() {
                 
                 if [ -n "$changes" ]; then
                     grouped_changes["$category"]+="$changes"$'\n'
+                    has_changes=true
                 fi
             fi
         done
     fi
     
+    # Only create changelog entry if there are actual changes
+    if [ "$has_changes" = false ]; then
+        echo -e "${YELLOW}No changes found in changesets, skipping changelog update${NC}"
+        return
+    fi
+    
+    # Process changesets
+    local new_entry="\n## [$new_version] - $current_date"
     new_entry+="\n"
     
     # Add grouped changes to entry
@@ -924,13 +932,21 @@ case "$COMMAND" in
         echo -e "${CYAN}Starting full release process for version $VERSION...${NC}"
         
         # Process changesets and update changelog
-        if [ -d "$CHANGESET_DIR" ] && [ -n "$(ls -A "$CHANGESET_DIR"/*.md 2>/dev/null)" ]; then
+        changelog_updated=false
+        if [ -d "$CHANGESET_DIR" ] && [ -n "$(ls -A "$CHANGESET_DIR"/*.md 2>/dev/null | grep -v README.md)" ]; then
             update_changelog "$VERSION"
-            remove_processed_changesets
+            if [ $? -eq 0 ]; then
+                changelog_updated=true
+                remove_processed_changesets
+            fi
         fi
         
-        # Update package version
-        update_package_version "$VERSION"
+        # Update package version only if changelog was updated or if forced
+        if [ "$changelog_updated" = true ]; then
+            update_package_version "$VERSION"
+        else
+            echo -e "${YELLOW}No changesets to process, skipping version update${NC}"
+        fi
         
         # Removed the call to prepare-release.sh as it conflicts with the CI/CD workflow
         # if [ -f "scripts/prepare-release.sh" ]; then
