@@ -53,8 +53,10 @@ updates:
       interval: "daily"
     target-branch: "main"
     open-pull-requests-limit: 10
+    # 'security' is not a valid dependency-type. Use 'all' to allow all updates.
+    # To focus on security updates, rely on GitHub's security alerts and PRs.
     allow:
-      - dependency-type: "security"
+      - dependency-type: "all"
     commit-message:
       prefix: "security"
       include: "scope"
