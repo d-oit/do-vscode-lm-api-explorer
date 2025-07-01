@@ -4,31 +4,145 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  issues: write
+  contents: read
+
 jobs:
   summary:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      models: read
-      contents: read
+    timeout-minutes: 5
+    # Only run for issues, not PRs
+    if: github.event.issue.pull_request == null
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run AI inference
-        id: inference
-        uses: actions/ai-inference@v1
-        with:
-          prompt: |
-            Summarize the following GitHub issue in one paragraph:
-            Title: ${{ github.event.issue.title }}
-            Body: ${{ github.event.issue.body }}
-
-      - name: Comment with AI summary
+      - name: Generate issue summary
+        id: summary
         run: |
-          gh issue comment $ISSUE_NUMBER --body '${{ steps.inference.outputs.response }}'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          RESPONSE: ${{ steps.inference.outputs.response }}
+          # Safely read issue data using jq
+          TITLE=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
+          BODY=$(jq -r '.issue.body // ""' "$GITHUB_EVENT_PATH")
+          AUTHOR=$(jq -r '.issue.user.login' "$GITHUB_EVENT_PATH")
+          
+          # Truncate body safely
+          BODY_TRUNCATED=$(echo "$BODY" | head -c 500)
+          if [ ${#BODY} -gt 500 ]; then
+            BODY_TRUNCATED="$BODY_TRUNCATED..."
+          fi
+          
+          # Generate summary with safe formatting
+          SUMMARY="**Issue Summary**
+
+          **Title:** $TITLE
+          **Author:** @$AUTHOR
+          **Created:** $(date -u +"%Y-%m-%d %H:%M UTC")
+
+          **Description:**
+          $BODY_TRUNCATED
+
+          ---
+          *This summary was automatically generated. Please review the full issue content above.*"
+          
+          # Securely write summary to file
+          echo "$SUMMARY" > /tmp/issue_summary.md
+          echo "summary_file=/tmp/issue_summary.md" >> $GITHUB_OUTPUT
+
+      - name: Add labels based on content
+        id: labeling
+        run: |
+          # Read sanitized input directly from event payload
+          TITLE=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
+          BODY=$(jq -r '.issue.body // ""' "$GITHUB_EVENT_PATH")
+          
+          # Convert to lowercase safely
+          TITLE_LOWER=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]')
+          BODY_LOWER=$(echo "$BODY" | tr '[:upper:]' '[:lower:]')
+          CONTENT="$TITLE_LOWER $BODY_LOWER"
+          
+          LABELS=()
+          
+          # Bug detection
+          if echo "$CONTENT" | grep -E "(bug|error|issue|problem|broken|fail|crash)" > /dev/null; then
+            LABELS+=("bug")
+          fi
+          
+          # Feature request detection
+          if echo "$CONTENT" | grep -E "(feature|enhancement|improve|add|new|request)" > /dev/null; then
+            LABELS+=("enhancement")
+          fi
+          
+          # Documentation detection
+          if echo "$CONTENT" | grep -E "(doc|documentation|readme|guide|help)" > /dev/null; then
+            LABELS+=("documentation")
+          fi
+          
+          # Question detection
+          if echo "$CONTENT" | grep -E "(question|how|why|what|help|support)" > /dev/null; then
+            LABELS+=("question")
+          fi
+          
+          # Convert array to comma-separated string
+          LABELS_STRING=$(IFS=','; echo "${LABELS[*]}")
+          echo "labels=$LABELS_STRING" >> $GITHUB_OUTPUT
+          echo "Detected labels: $LABELS_STRING"
+
+      - name: Comment with summary and add labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            try {
+              // Read the summary from file
+              const summaryContent = fs.readFileSync('${{ steps.summary.outputs.summary_file }}', 'utf8');
+              
+              // Add comment with summary
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: summaryContent
+              });
+              
+              console.log('Summary comment added successfully');
+              
+              // Add labels if any were detected
+              const labelsString = '${{ steps.labeling.outputs.labels }}';
+              if (labelsString && labelsString.trim() !== '') {
+                const labels = labelsString.split(',').filter(label => label.trim() !== '');
+                
+                if (labels.length > 0) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    labels: labels
+                  });
+                  
+                  console.log(`Added labels: ${labels.join(', ')}`);
+                }
+              }
+              
+            } catch (error) {
+              console.error('Failed to process issue:', error.message);
+              
+              // Add a simple comment if the main process fails
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `Thank you for opening this issue! 
+                
+                A maintainer will review it shortly. Please ensure you've provided:
+                - Clear description of the issue/request
+                - Steps to reproduce (for bugs)
+                - Expected vs actual behavior
+                - VS Code and extension versions
+                
+                *This is an automated message.*`
+              });
+            }

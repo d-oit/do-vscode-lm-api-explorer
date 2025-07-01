@@ -1,0 +1,375 @@
+name: Auto-sync Dev to Main
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+    inputs:
+      force_sync:
+        description: 'Force sync even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  checks: read
+
+jobs:
+  check-sync-conditions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      should-sync: ${{ steps.conditions.outputs.should-sync }}
+      has-changes: ${{ steps.changes.outputs.has-changes }}
+      version-bumped: ${{ steps.version.outputs.version-bumped }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Check for meaningful changes
+        id: changes
+        run: |
+          # Get the latest commit on main
+          git fetch origin main
+          MAIN_SHA=$(git rev-parse origin/main)
+          DEV_SHA=$(git rev-parse HEAD)
+          
+          echo "Main SHA: $MAIN_SHA"
+          echo "Dev SHA: $DEV_SHA"
+          
+          # Check if dev is ahead of main
+          if git merge-base --is-ancestor $DEV_SHA $MAIN_SHA; then
+            echo "Dev is not ahead of main - no sync needed"
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+          else
+            # Check for meaningful changes (exclude certain files)
+            CHANGED_FILES=$(git diff --name-only $MAIN_SHA..$DEV_SHA | grep -v -E '\.(md|txt|yml|yaml)$|^\.github/|^scripts/|^test-' | wc -l)
+            
+            if [ "$CHANGED_FILES" -gt 0 ] || [ "${{ github.event.inputs.force_sync }}" = "true" ]; then
+              echo "Meaningful changes detected or force sync requested"
+              echo "has-changes=true" >> $GITHUB_OUTPUT
+            else
+              echo "Only documentation/config changes detected"
+              echo "has-changes=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Check version bump
+        id: version
+        run: |
+          # Get version from package.json on both branches
+          DEV_VERSION=$(node -p "require('./package.json').version")
+          
+          git checkout origin/main -- package.json 2>/dev/null || echo "No package.json on main yet"
+          MAIN_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
+          
+          echo "Dev version: $DEV_VERSION"
+          echo "Main version: $MAIN_VERSION"
+          
+          # Restore dev package.json
+          git checkout HEAD -- package.json
+          
+          # Simple version comparison
+          if [ "$DEV_VERSION" != "$MAIN_VERSION" ]; then
+            echo "Version has been bumped"
+            echo "version-bumped=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version not bumped"
+            echo "version-bumped=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Evaluate sync conditions
+        id: conditions
+        run: |
+          HAS_CHANGES="${{ steps.changes.outputs.has-changes }}"
+          VERSION_BUMPED="${{ steps.version.outputs.version-bumped }}"
+          FORCE_SYNC="${{ github.event.inputs.force_sync }}"
+          
+          echo "Has changes: $HAS_CHANGES"
+          echo "Version bumped: $VERSION_BUMPED"
+          echo "Force sync: $FORCE_SYNC"
+          
+          # Sync if:
+          # 1. Has meaningful changes AND version is bumped, OR
+          # 2. Force sync is requested
+          if [ "$HAS_CHANGES" = "true" ] && [ "$VERSION_BUMPED" = "true" ]; then
+            echo "✅ Conditions met: meaningful changes + version bump"
+            echo "should-sync=true" >> $GITHUB_OUTPUT
+          elif [ "$FORCE_SYNC" = "true" ]; then
+            echo "✅ Force sync requested"
+            echo "should-sync=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Conditions not met for auto-sync"
+            echo "Reason: Changes=$HAS_CHANGES, Version bumped=$VERSION_BUMPED"
+            echo "should-sync=false" >> $GITHUB_OUTPUT
+          fi
+
+  run-tests:
+    needs: check-sync-conditions
+    if: needs.check-sync-conditions.outputs.should-sync == 'true'
+    uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
+      security-events: write
+
+  create-sync-pr:
+    needs: [check-sync-conditions, run-tests]
+    if: needs.check-sync-conditions.outputs.should-sync == 'true' && needs.run-tests.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      pr-number: ${{ steps.create-pr.outputs.pr-number }}
+      pr-created: ${{ steps.create-pr.outputs.pr-created }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for existing PR
+        id: check-pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: 'dev',
+              base: 'main',
+              state: 'open'
+            });
+            
+            if (prs.length > 0) {
+              console.log(`Found existing PR #${prs[0].number}`);
+              core.setOutput('existing-pr', prs[0].number);
+              return prs[0].number;
+            } else {
+              console.log('No existing PR found');
+              core.setOutput('existing-pr', '');
+              return null;
+            }
+
+      - name: Create sync PR
+        id: create-pr
+        if: steps.check-pr.outputs.existing-pr == ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: devBranch } = await github.rest.repos.getBranch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              branch: 'dev'
+            });
+            
+            const { data: mainBranch } = await github.rest.repos.getBranch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              branch: 'main'
+            });
+            
+            // Get commits between main and dev
+            const { data: comparison } = await github.rest.repos.compareCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: mainBranch.commit.sha,
+              head: devBranch.commit.sha
+            });
+            
+            // Create PR body with commit summary
+            const commits = comparison.commits.slice(-10);
+            const commitList = commits.map(commit => 
+              `- ${commit.commit.message.split('\\n')[0]} (${commit.sha.substring(0, 7)})`
+            ).join('\\n');
+            
+            const prBody = [
+              '## 🔄 Auto-sync from Dev to Main',
+              '',
+              'This PR automatically syncs the latest changes from the `dev` branch to `main`.',
+              '',
+              '### 📋 Recent Changes',
+              commitList,
+              comparison.commits.length > 10 ? `\\n... and ${comparison.commits.length - 10} more commits` : '',
+              '',
+              '### ✅ Pre-merge Validation',
+              '- [x] All tests passed',
+              '- [x] Version has been bumped',
+              '- [x] Meaningful code changes detected',
+              '',
+              '### 🤖 Auto-merge',
+              'This PR will be automatically merged if all status checks pass.',
+              '',
+              '---',
+              '*This PR was created automatically by the Auto-sync Dev to Main workflow.*'
+            ].join('\\n');
+
+            try {
+              const { data: pr } = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🔄 Auto-sync: Dev → Main (v${require('./package.json').version})`,
+                head: 'dev',
+                base: 'main',
+                body: prBody,
+                draft: false
+              });
+              
+              console.log(`✅ Created PR #${pr.number}: ${pr.title}`);
+              core.setOutput('pr-number', pr.number);
+              core.setOutput('pr-created', 'true');
+              
+              // Add labels
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['auto-sync', 'dev-to-main']
+              });
+              
+              return pr.number;
+            } catch (error) {
+              console.error('Failed to create PR:', error);
+              throw error;
+            }
+
+      - name: Use existing PR
+        id: use-existing
+        if: steps.check-pr.outputs.existing-pr != ''
+        run: |
+          echo "Using existing PR #${{ steps.check-pr.outputs.existing-pr }}"
+          echo "pr-number=${{ steps.check-pr.outputs.existing-pr }}" >> $GITHUB_OUTPUT
+          echo "pr-created=false" >> $GITHUB_OUTPUT
+
+  auto-merge-pr:
+    needs: [check-sync-conditions, run-tests, create-sync-pr]
+    if: always() && needs.check-sync-conditions.outputs.should-sync == 'true' && needs.run-tests.result == 'success' && (needs.create-sync-pr.outputs.pr-number != '' || needs.create-sync-pr.outputs.existing-pr != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Wait for status checks
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = '${{ needs.create-sync-pr.outputs.pr-number }}' || '${{ needs.create-sync-pr.outputs.existing-pr }}';
+            const maxWaitTime = 10 * 60 * 1000; // 10 minutes
+            const checkInterval = 30 * 1000; // 30 seconds
+            const startTime = Date.now();
+            
+            console.log(`Waiting for status checks on PR #${prNumber}...`);
+            
+            while (Date.now() - startTime < maxWaitTime) {
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              
+              console.log(`PR mergeable state: ${pr.mergeable_state}`);
+              
+              if (pr.mergeable_state === 'clean') {
+                console.log('✅ All status checks passed, PR is ready to merge');
+                break;
+              } else if (pr.mergeable_state === 'dirty' || pr.mergeable_state === 'unstable') {
+                console.log('❌ Status checks failed or PR has conflicts');
+                throw new Error(`PR is not mergeable: ${pr.mergeable_state}`);
+              }
+              
+              console.log('⏳ Waiting for status checks to complete...');
+              await new Promise(resolve => setTimeout(resolve, checkInterval));
+            }
+
+      - name: Auto-merge PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = '${{ needs.create-sync-pr.outputs.pr-number }}' || '${{ needs.create-sync-pr.outputs.existing-pr }}';
+            
+            try {
+              console.log(`🤖 Auto-merging PR #${prNumber}...`);
+              
+              const { data: result } = await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                merge_method: 'squash',
+                commit_title: `🔄 Auto-sync: Dev → Main (v${require('./package.json').version})`,
+                commit_message: `Automatically synced changes from dev branch to main.\\n\\nThis merge was performed by the Auto-sync Dev to Main workflow after all tests passed.`
+              });
+              
+              if (result.merged) {
+                console.log('✅ PR merged successfully');
+                
+                // Add success comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: '🎉 **Auto-sync completed successfully!**\\n\\nChanges from `dev` have been merged into `main` and the release workflow will be triggered automatically.'
+                });
+              } else {
+                throw new Error('PR merge was not successful');
+              }
+            } catch (error) {
+              console.error('❌ Failed to auto-merge PR:', error.message);
+              
+              // Add failure comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `❌ **Auto-merge failed**: ${error.message}\\n\\nPlease review and merge manually.`
+              });
+              
+              throw error;
+            }
+
+  notify-result:
+    needs: [check-sync-conditions, run-tests, create-sync-pr, auto-merge-pr]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Notify sync result
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const syncNeeded = '${{ needs.check-sync-conditions.outputs.should-sync }}';
+            const testsResult = '${{ needs.run-tests.result }}';
+            const prResult = '${{ needs.create-sync-pr.result }}';
+            const mergeResult = '${{ needs.auto-merge-pr.result }}';
+            
+            console.log('=== Auto-sync Dev to Main - Final Status ===');
+            console.log(`Sync needed: ${syncNeeded}`);
+            console.log(`Tests result: ${testsResult}`);
+            console.log(`PR creation: ${prResult}`);
+            console.log(`Auto-merge: ${mergeResult}`);
+            
+            if (syncNeeded === 'false') {
+              console.log('ℹ️ No sync performed - conditions not met');
+            } else if (mergeResult === 'success') {
+              console.log('🎉 Auto-sync completed successfully!');
+            } else {
+              console.log('❌ Auto-sync failed - manual intervention required');
+            }

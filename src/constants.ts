@@ -3,7 +3,10 @@
 // Command IDs
 export const COMMANDS = {
     DISCOVER_MODELS: 'do-vscode-lm-explorer.discoverModels',
-    CLEAR_CACHE_AND_DISCOVER: 'do-vscode-lm-explorer.clearCacheAndDiscover'
+    CLEAR_CACHE_AND_DISCOVER: 'do-vscode-lm-explorer.clearCacheAndDiscover',
+    CUSTOM_TEST: 'do-vscode-lm-explorer.customTest',
+    COMPARE_MODELS: 'do-vscode-lm-explorer.compareModels',
+    EXPORT_DATA: 'do-vscode-lm-explorer.exportData'
 } as const;
 
 // UI Text Constants
@@ -164,7 +167,16 @@ export const PROGRESS_STEPS = {
 // External URLs
 export const URLS = {
     COPILOT_SETUP_GUIDE: 'https://docs.github.com/en/copilot/using-github-copilot',
-    PREMIUM_REQUESTS_INFO: 'https://docs.github.com/en/copilot/managing-copilot/monitoring-usage-and-entitlements/about-premium-requests'
+    PREMIUM_REQUESTS_INFO: 'https://docs.github.com/en/copilot/managing-copilot/monitoring-usage-and-entitlements/about-premium-requests',
+    GITHUB_ACTIONS: 'https://github.com/features/actions'
+} as const;
+
+// Workflow Constants
+export const WORKFLOW = {
+    AUTO_SYNC: {
+        NAME: 'Auto-sync Dev to Main',
+        DESCRIPTION: 'Automatically syncs changes from dev to main branch with quality gates'
+    }
 } as const;
 
 // Date Constants
