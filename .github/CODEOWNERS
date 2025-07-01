@@ -1,0 +1,17 @@
+# Global code owners
+* @d-oit
+
+# Workflow files require admin review
+/.github/workflows/ @d-oit
+
+# Package.json changes require careful review
+package.json @d-oit
+package-lock.json @d-oit
+pnpm-lock.yaml @d-oit
+
+# Security-sensitive files
+/.github/dependabot.yml @d-oit
+/scripts/ @d-oit
+
+# Documentation
+*.md @d-oit
