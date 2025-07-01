@@ -1,0 +1,11 @@
+{
+  "title": "Bump shell-quote from 1.8.1 to 1.8.3 (security update)",
+  "body": "Bumps [shell-quote](https://github.com/ljharb/shell-quote) from 1.8.1 to 1.8.3.\n\n**Security Advisory**\n*This update includes security fixes for the following vulnerabilities:*\n\n> ## CVE-2024-XXXX\n> **Severity**: High\n> **Description**: Improper input validation in shell-quote could lead to command injection.\n> **CVSS Score**: 7.5\n\n**Release notes**\n*Sourced from [shell-quote's releases](https://github.com/ljharb/shell-quote/releases).*\n\n> ## v1.8.3\n> ### Security\n> - Fix command injection vulnerability\n> - Improve input validation\n> \n> ## v1.8.2\n> ### Bug Fixes\n> - Minor parsing improvements\n\n**Commits**\n- [`abc789`](https://github.com/ljharb/shell-quote/commit/abc789) Fix security vulnerability\n- [`def012`](https://github.com/ljharb/shell-quote/commit/def012) Improve input validation\n\n---\n**Dependabot compatibility score**\n\nDependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.\n\n**This is a security update and should be merged as soon as possible.**",
+  "user": {
+    "login": "dependabot[bot]"
+  },
+  "head": {
+    "sha": "ghi789"
+  },
+  "mergeable_state": "clean"
+}

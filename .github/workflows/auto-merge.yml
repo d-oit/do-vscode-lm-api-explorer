@@ -49,7 +49,7 @@ jobs:
               updateType = 'security';
               shouldMerge = true;
               console.log('✅ Security update detected - will auto-merge');
-            } else if (title.includes('patch') || title.match(/bump.*from.*\d+\.\d+\.\d+.*to.*\d+\.\d+\.\d+/)) {
+            } else if (title.includes('patch')) {
               updateType = 'patch';
               shouldMerge = true;
               console.log('✅ Patch update detected - will auto-merge');
@@ -61,6 +61,34 @@ jobs:
               updateType = 'major';
               shouldMerge = false;
               console.log('⚠️ Major update detected - requires manual review');
+            } else if (title.includes('bump')) {
+              // Default bump detection - analyze version numbers
+              const versionMatch = title.match(/from\s+(\d+)\.(\d+)\.(\d+).*to\s+(\d+)\.(\d+)\.(\d+)/);
+              if (versionMatch) {
+                const [, fromMajor, fromMinor, fromPatch, toMajor, toMinor, toPatch] = versionMatch.map(Number);
+                
+                if (toMajor > fromMajor) {
+                  updateType = 'major';
+                  shouldMerge = false;
+                  console.log('⚠️ Major version bump detected - requires manual review');
+                } else if (toMinor > fromMinor) {
+                  updateType = 'minor';
+                  shouldMerge = true;
+                  console.log('✅ Minor version bump detected - will auto-merge');
+                } else if (toPatch > fromPatch) {
+                  updateType = 'patch';
+                  shouldMerge = true;
+                  console.log('✅ Patch version bump detected - will auto-merge');
+                } else {
+                  updateType = 'unknown';
+                  shouldMerge = false;
+                  console.log('⚠️ Unknown version change - requires manual review');
+                }
+              } else {
+                updateType = 'patch';
+                shouldMerge = true;
+                console.log('✅ Generic bump detected - treating as patch update');
+              }
             }
             
             // Check if all required checks are passing

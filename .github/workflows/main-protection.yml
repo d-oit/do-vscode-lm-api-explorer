@@ -23,10 +23,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies (for semver)
-        run: npm ci
 
       - name: Check if PR is from dev branch
         run: |
@@ -56,9 +52,8 @@ jobs:
             exit 1
           fi
           
-          # Use semver for proper comparison
+          # Use built-in version comparison (no semver dependency needed)
           COMPARISON=$(node -e "
-            const semver = require('semver');
             const current = '$CURRENT_VERSION';
             const latest = '$LATEST_TAG';
             
@@ -66,20 +61,38 @@ jobs:
             console.log('  Current:', current);
             console.log('  Latest tag:', latest);
             
-            if (semver.valid(current) && semver.valid(latest)) {
-              if (semver.gt(current, latest)) {
+            // Simple semver comparison without external dependency
+            function parseVersion(version) {
+              const parts = version.split('-')[0].split('.').map(Number);
+              return { major: parts[0] || 0, minor: parts[1] || 0, patch: parts[2] || 0 };
+            }
+            
+            function compareVersions(a, b) {
+              const vA = parseVersion(a);
+              const vB = parseVersion(b);
+              
+              if (vA.major !== vB.major) return vA.major - vB.major;
+              if (vA.minor !== vB.minor) return vA.minor - vB.minor;
+              return vA.patch - vB.patch;
+            }
+            
+            // Validate version format
+            const versionRegex = /^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$/;
+            if (!versionRegex.test(current) || !versionRegex.test(latest)) {
+              console.log('  Result: Invalid version format ❌');
+              console.log('invalid');
+            } else {
+              const comparison = compareVersions(current, latest);
+              if (comparison > 0) {
                 console.log('  Result: Version properly bumped ✅');
                 console.log('valid');
-              } else if (semver.eq(current, latest)) {
+              } else if (comparison === 0) {
                 console.log('  Result: Version not bumped ❌');
                 console.log('invalid');
               } else {
                 console.log('  Result: Version downgraded ❌');
                 console.log('invalid');
               }
-            } else {
-              console.log('  Result: Invalid version format ❌');
-              console.log('invalid');
             }
           ")
           

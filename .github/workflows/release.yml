@@ -269,17 +269,17 @@ jobs:
               if [ -z "$CHANGELOG_CONTENT" ] || [ ${#CHANGELOG_CONTENT} -lt 10 ]; then
                 CHANGELOG_CONTENT="Release $VERSION
 
-This release includes various improvements and updates. See the full changelog for details."
+          This release includes various improvements and updates. See the full changelog for details."
               fi
             else
               CHANGELOG_CONTENT="Release $VERSION
 
-This release includes various improvements and updates. See the full changelog for details."
+          This release includes various improvements and updates. See the full changelog for details."
             fi
           else
             CHANGELOG_CONTENT="Release $VERSION
 
-This release includes various improvements and updates."
+          This release includes various improvements and updates."
           fi
           
           # Save to file to handle multiline content properly

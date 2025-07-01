@@ -1,0 +1,11 @@
+{
+  "title": "Bump typescript from 5.8.3 to 6.0.0",
+  "body": "Bumps [typescript](https://github.com/microsoft/TypeScript) from 5.8.3 to 6.0.0.\n\n**Release notes**\n*Sourced from [TypeScript's releases](https://github.com/microsoft/TypeScript/releases).*\n\n> ## TypeScript 6.0.0\n> ### Breaking Changes\n> - Removed support for legacy module resolution\n> - Changed default target to ES2022\n> - Stricter type checking for function parameters\n> - Removed deprecated compiler options\n> \n> ### New Features\n> - Enhanced type inference\n> - New utility types\n> - Improved performance\n\n**Migration Guide**\nThis is a major version update with breaking changes. Please review:\n- Update tsconfig.json target and module settings\n- Review type errors that may surface\n- Test thoroughly before merging\n\n**Commits**\n- [`major123`](https://github.com/microsoft/TypeScript/commit/major123) TypeScript 6.0.0 release\n\n---\n**⚠️ BREAKING CHANGES DETECTED**\n\nThis is a major version update that includes breaking changes. Manual review is required before merging.\n\n**Dependabot compatibility score**\n\nDependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.",
+  "user": {
+    "login": "dependabot[bot]"
+  },
+  "head": {
+    "sha": "major456"
+  },
+  "mergeable_state": "clean"
+}
