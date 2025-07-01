@@ -167,12 +167,64 @@ jobs:
           echo "vsix_file_path=$VSIX_FILE" >> $GITHUB_OUTPUT
           echo "vsix_file_name=$(basename $VSIX_FILE)" >> $GITHUB_OUTPUT
 
+      - name: Extract changelog content for release
+        id: extract-changelog
+        run: |
+          VERSION="${{ needs.version_and_tag.outputs.new_version }}"
+          
+          # Extract the changelog content for the current version
+          if [ -f "CHANGELOG.md" ]; then
+            # Find the start of the current version section
+            START_LINE=$(grep -n "^## \[$VERSION\]" CHANGELOG.md | cut -d: -f1)
+            
+            if [ -n "$START_LINE" ]; then
+              # Find the start of the next version section (or end of file)
+              NEXT_VERSION_LINE=$(tail -n +$((START_LINE + 1)) CHANGELOG.md | grep -n "^## \[" | head -1 | cut -d: -f1)
+              
+              if [ -n "$NEXT_VERSION_LINE" ]; then
+                # Calculate the actual line number in the file
+                END_LINE=$((START_LINE + NEXT_VERSION_LINE - 1))
+                CHANGELOG_CONTENT=$(sed -n "${START_LINE},${END_LINE}p" CHANGELOG.md | head -n -1)
+              else
+                # No next version found, extract to end of file
+                CHANGELOG_CONTENT=$(tail -n +$START_LINE CHANGELOG.md)
+              fi
+              
+              # Remove the version header line and clean up
+              CHANGELOG_CONTENT=$(echo "$CHANGELOG_CONTENT" | tail -n +2 | sed '/^$/d' | head -c 65000)
+              
+              # If changelog content is empty or very short, provide a default message
+              if [ -z "$CHANGELOG_CONTENT" ] || [ ${#CHANGELOG_CONTENT} -lt 10 ]; then
+                CHANGELOG_CONTENT="Release $VERSION
+
+This release includes various improvements and updates. See the full changelog for details."
+              fi
+            else
+              CHANGELOG_CONTENT="Release $VERSION
+
+This release includes various improvements and updates. See the full changelog for details."
+            fi
+          else
+            CHANGELOG_CONTENT="Release $VERSION
+
+This release includes various improvements and updates."
+          fi
+          
+          # Save to file to handle multiline content properly
+          echo "$CHANGELOG_CONTENT" > /tmp/release_body.md
+          echo "release_body_file=/tmp/release_body.md" >> $GITHUB_OUTPUT
+          
+          # Also output a truncated version for debugging
+          echo "Release body preview:"
+          echo "$CHANGELOG_CONTENT" | head -10
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.build-vsix.outputs.vsix_file_path }}
           name: "Release ${{ needs.version_and_tag.outputs.new_version }}"
           tag_name: ${{ needs.version_and_tag.outputs.new_tag_name }}
+          body_path: ${{ steps.extract-changelog.outputs.release_body_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
