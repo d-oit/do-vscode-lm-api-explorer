@@ -5,20 +5,35 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   validate-pr:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (for semver)
+        run: npm ci
+
       - name: Check if PR is from dev branch
         run: |
           if [ "${{ github.head_ref }}" != "dev" ]; then
             echo "❌ Pull requests to main branch must come from dev branch only"
             echo "Current source branch: ${{ github.head_ref }}"
+            echo "::error::Invalid source branch. PRs to main must come from dev branch."
             exit 1
           else
             echo "✅ Pull request is from dev branch - proceeding"
@@ -26,27 +41,113 @@ jobs:
 
       - name: Validate version bump
         run: |
+          set -e
+          
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
           
           echo "Current version: $CURRENT_VERSION"
           echo "Latest tag: $LATEST_TAG"
           
+          # Validate version format
+          if ! echo "$CURRENT_VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$'; then
+            echo "❌ Invalid version format in package.json: $CURRENT_VERSION"
+            echo "::error::Version must follow semantic versioning (e.g., 1.2.3 or 1.2.3-beta.1)"
+            exit 1
+          fi
+          
+          # Use semver for proper comparison
           COMPARISON=$(node -e "
             const semver = require('semver');
             const current = '$CURRENT_VERSION';
             const latest = '$LATEST_TAG';
-            if (semver.gt(current, latest)) {
-              console.log('valid');
+            
+            console.log('Comparing versions:');
+            console.log('  Current:', current);
+            console.log('  Latest tag:', latest);
+            
+            if (semver.valid(current) && semver.valid(latest)) {
+              if (semver.gt(current, latest)) {
+                console.log('  Result: Version properly bumped ✅');
+                console.log('valid');
+              } else if (semver.eq(current, latest)) {
+                console.log('  Result: Version not bumped ❌');
+                console.log('invalid');
+              } else {
+                console.log('  Result: Version downgraded ❌');
+                console.log('invalid');
+              }
             } else {
+              console.log('  Result: Invalid version format ❌');
               console.log('invalid');
             }
-          " 2>/dev/null || echo "valid")
+          ")
           
-          if [ "$COMPARISON" != "valid" ]; then
+          if echo "$COMPARISON" | grep -q "invalid"; then
             echo "❌ Version must be bumped before merging to main"
             echo "Current: $CURRENT_VERSION, Latest: $LATEST_TAG"
+            echo "::error::Please bump the version using 'npm run release:prepare' or manually update package.json"
             exit 1
           else
             echo "✅ Version has been properly bumped"
           fi
+
+      - name: Check for required files
+        run: |
+          echo "Checking for required files..."
+          
+          required_files=("package.json" "README.md" "CHANGELOG.md" "src/extension.ts")
+          missing_files=()
+          
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+          
+          if [ ${#missing_files[@]} -gt 0 ]; then
+            echo "❌ Missing required files: ${missing_files[*]}"
+            echo "::error::Required files are missing from the repository"
+            exit 1
+          else
+            echo "✅ All required files are present"
+          fi
+
+      - name: Validate package.json structure
+        run: |
+          echo "Validating package.json structure..."
+          
+          # Check required fields
+          required_fields=("name" "version" "description" "main" "engines" "contributes")
+          
+          for field in "${required_fields[@]}"; do
+            if ! node -e "
+              const pkg = require('./package.json');
+              if (!pkg.$field) {
+                console.log('Missing field: $field');
+                process.exit(1);
+              }
+            "; then
+              echo "❌ Missing required field in package.json: $field"
+              echo "::error::package.json is missing required field: $field"
+              exit 1
+            fi
+          done
+          
+          echo "✅ package.json structure is valid"
+
+      - name: Check VS Code engine compatibility
+        run: |
+          echo "Checking VS Code engine compatibility..."
+          
+          ENGINE_VERSION=$(node -p "require('./package.json').engines.vscode")
+          echo "Required VS Code version: $ENGINE_VERSION"
+          
+          # Validate engine version format
+          if ! echo "$ENGINE_VERSION" | grep -E '^\^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Invalid VS Code engine version format: $ENGINE_VERSION"
+            echo "::error::VS Code engine version should be in format ^x.y.z"
+            exit 1
+          fi
+          
+          echo "✅ VS Code engine version is valid"

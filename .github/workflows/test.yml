@@ -13,31 +13,75 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        node-version: [20]
+      fail-fast: false
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Node.js
+      - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
       - name: Install dependencies
+        timeout-minutes: 5
         run: npm ci
 
+      - name: Security audit
+        continue-on-error: true
+        run: |
+          echo "Running security audit..."
+          npm audit --audit-level moderate || {
+            echo "::warning::Security vulnerabilities found. Review before merging."
+            npm audit --audit-level moderate --json > audit-results.json || true
+          }
+
       - name: Install xvfb
-        run: sudo apt-get install -y xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
 
       - name: Run linting
+        timeout-minutes: 5
         run: npm run lint
 
       - name: Type checking
+        timeout-minutes: 5
         run: npm run check-types
 
+      - name: Build extension
+        timeout-minutes: 5
+        run: npm run compile
+
       - name: Run tests
+        timeout-minutes: 10
         run: xvfb-run --auto-servernum npm test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-node-${{ matrix.node-version }}
+          path: |
+            coverage/
+            test-results.xml
+          retention-days: 7
+
+      - name: Upload security audit results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-results
+          path: audit-results.json
+          retention-days: 30

@@ -1,85 +1,268 @@
 # CI/CD Workflow Documentation
 
-This document details the CI/CD pipelines and release processes for the VS Code LM API Explorer extension.
+This document details the comprehensive CI/CD pipelines and release processes for the VS Code LM API Explorer extension.
 
-## Workflow Structure
+## Workflow Architecture
 
-The project uses GitHub Actions for CI/CD with three primary workflows:
+The project uses GitHub Actions for CI/CD with six primary workflows:
 
-1. **Development CI** (`dev-ci.yml`):
-   - Runs on pushes to `dev` branch
-   - Executes:
-     - Unit tests
-     - Integration tests
-     - Linting
-     - Type checking
-   - Creates build artifacts
+### 1. **Test Workflow** (`test.yml`)
+- **Triggers**: Push to `dev`/`main`, Pull requests
+- **Purpose**: Continuous integration testing
+- **Features**:
+  - Multi-node version testing (Node 20)
+  - Security audit scanning
+  - Linting and type checking
+  - Extension building and testing
+  - Test result artifacts
+  - 20-minute timeout protection
 
-2. **Main Protection** (`main-protection.yml`):
-   - Runs on pull requests targeting `main`
-   - Validates:
-     - Version bump in package.json
-     - All tests passing
-     - Successful build
-     - Lint and type check compliance
+### 2. **Main Branch Protection** (`main-protection.yml`)
+- **Triggers**: Pull requests to `main` branch
+- **Purpose**: Enforce release quality standards
+- **Validations**:
+  - Source branch must be `dev`
+  - Version bump validation (semver)
+  - Required files presence check
+  - package.json structure validation
+  - VS Code engine compatibility
 
-3. **Release Automation** (`release.yml`):
-   - Triggers on merges to `main`
-   - Executes:
-     - Full test suite
-     - VSIX package creation
-     - GitHub release creation
-     - VS Code Marketplace publication
-     - Version tagging
+### 3. **Release Workflow** (`release.yml`)
+- **Triggers**: Push to `main`, Manual dispatch
+- **Purpose**: Automated release management
+- **Features**:
+  - Changeset processing
+  - Version tagging with validation
+  - VSIX package creation and validation
+  - GitHub release with changelog
+  - VS Code Marketplace publishing
+  - Comprehensive error handling
+
+### 4. **Auto-merge Dependabot** (`auto-merge.yml`)
+- **Triggers**: Dependabot PRs
+- **Purpose**: Automated dependency updates
+- **Safety Features**:
+  - Update type classification (security/patch/minor/major)
+  - Check status validation
+  - Only auto-merge safe updates
+  - Manual review required for major updates
+  - Failure notifications
+
+### 5. **Issue Summary** (`summary.yml`)
+- **Triggers**: New issues opened
+- **Purpose**: Automated issue management
+- **Features**:
+  - Automatic issue summarization
+  - Content-based label assignment
+  - Welcome message for new issues
+  - Error handling with fallback
+
+### 6. **Test Release** (`test-release.yml`)
+- **Triggers**: Manual dispatch only
+- **Purpose**: Release workflow testing
+- **Features**:
+  - Safe testing environment
+  - Changeset validation
+  - Version bump simulation
 
 ## Branching Strategy
 
-- **`dev` branch**: Primary development branch
-- **`main` branch**: Release-only branch (protected)
-- **Feature branches**: Created from `dev` using `feature/` prefix
+```
+main (protected)     <- Release-only branch
+  ^
+dev                  <- Primary development branch  
+  ^
+feature/*            <- Feature development branches
+hotfix/*             <- Emergency fixes
+```
+
+### Branch Protection Rules
+- **main**: Requires PR from `dev`, all checks must pass, version must be bumped
+- **dev**: Requires PR review, all checks must pass
+- **feature/***: No restrictions, but CI runs on PRs
 
 ## Release Process
 
+### Automated Release (Recommended)
+1. **Development**:
+   ```bash
+   git checkout dev
+   git pull origin dev
+   # Make changes
+   git commit -m "feat: add new feature"
+   ```
+
+2. **Create Changeset**:
+   ```bash
+   npm run changeset:create
+   # Follow interactive prompts
+   ```
+
+3. **Create Release PR**:
+   ```bash
+   git push origin dev
+   # Create PR from dev -> main
+   ```
+
+4. **Automatic Release**:
+   - PR merge triggers release workflow
+   - Version bump, tagging, and publishing happen automatically
+
+### Manual Release (Emergency)
 1. **Version Preparation**:
    ```bash
    npm run release:prepare
    ```
-   - Interactive version bump (major/minor/patch)
-   - Updates CHANGELOG.md
-   - Commits changes with standardized message
 
-2. **PR Creation**:
-   - Create PR from `dev` to `main`
-   - Ensure all checks pass
-   - Include release notes in PR description
+2. **Manual Workflow Trigger**:
+   - Use GitHub Actions UI
+   - Select version type and options
 
-3. **Merge & Automation**:
-   - Squash merge PR to `main`
-   - Automated processes:
-     - Version tag creation
-     - GitHub release with auto-generated notes
-     - VSIX publication to Marketplace
-     - Release notes posted to Slack/Teams
+## Security & Quality Gates
 
-## Quality Gates
+### Security Measures
+- **Dependency Scanning**: Daily security updates
+- **Audit Checks**: npm audit on every build
+- **Permission Validation**: Minimal required permissions
+- **Secret Management**: Secure token handling
+
+### Quality Checks
+- **Code Quality**:
+  - ESLint with TypeScript rules
+  - Strict TypeScript compilation
+  - Code formatting validation
 
 - **Testing**:
-  - 100% unit test coverage required for new features
-  - Integration tests for all user flows
-  - Security scanning of dependencies
+  - Unit tests with coverage
+  - Integration tests
+  - VS Code extension testing
+  - Cross-platform compatibility
 
-- **Checks**:
-  - Linting (ESLint)
-  - Type checking (TypeScript)
-  - VS Code API compatibility
-  - Marketplace metadata validation
+- **Build Validation**:
+  - VSIX package integrity
+  - File size validation
+  - Marketplace compatibility
 
-## Troubleshooting
+## Dependency Management
 
-Common issues and solutions:
+### Dependabot Configuration
+- **Regular Updates**: Weekly on Monday (dev branch)
+- **Security Updates**: Daily (main branch)
+- **GitHub Actions**: Weekly on Tuesday
+- **Auto-merge**: Patch and minor updates only
+- **Manual Review**: Major updates and breaking changes
 
-- **Failed Version Bump**: Ensure `npm run release:prepare` was executed
-- **Marketplace Publish Failure**: Check PAT permissions
-- **Test Failures**: Verify VS Code version compatibility
+### Update Classification
+- **Security**: Auto-merge immediately
+- **Patch**: Auto-merge after checks pass
+- **Minor**: Auto-merge after checks pass
+- **Major**: Manual review required
 
-For more details, see the [README.md](../README.md) Development & Architecture section.
+## Troubleshooting Guide
+
+### Common Issues
+
+#### 1. Version Validation Fails
+**Symptoms**: Main protection workflow fails
+**Causes**: 
+- Version not bumped
+- Invalid semver format
+**Solutions**:
+```bash
+npm run release:prepare
+# or manually update package.json version
+```
+
+#### 2. Marketplace Publishing Fails
+**Symptoms**: Release succeeds but marketplace publish fails
+**Causes**:
+- Invalid/expired VSCE_PAT
+- Version already exists
+- Marketplace validation errors
+**Solutions**:
+- Check VSCE_PAT in repository secrets
+- Verify version uniqueness
+- Review marketplace guidelines
+
+#### 3. Auto-merge Not Working
+**Symptoms**: Dependabot PRs not auto-merging
+**Causes**:
+- Failed checks
+- Major version update
+- Merge conflicts
+**Solutions**:
+- Check workflow logs
+- Review failed checks
+- Manually merge if needed
+
+#### 4. Test Failures
+**Symptoms**: CI tests failing
+**Causes**:
+- Code issues
+- Environment problems
+- Dependency conflicts
+**Solutions**:
+```bash
+npm test                    # Run tests locally
+npm run lint               # Check linting
+npm run check-types        # Verify TypeScript
+```
+
+### Debug Commands
+```bash
+# Check workflow status
+gh workflow list
+
+# View workflow runs
+gh run list --workflow=test.yml
+
+# Download artifacts
+gh run download <run-id>
+
+# Check repository secrets
+gh secret list
+```
+
+## Monitoring & Metrics
+
+### Key Metrics to Monitor
+- **Build Success Rate**: Target >95%
+- **Test Coverage**: Target >80%
+- **Release Frequency**: Weekly releases
+- **Security Vulnerabilities**: Zero high/critical
+- **Marketplace Rating**: Maintain >4.0
+
+### Alerts & Notifications
+- **Failed Releases**: Immediate notification
+- **Security Vulnerabilities**: Daily digest
+- **Failed Tests**: PR status checks
+- **Marketplace Issues**: Weekly review
+
+## Maintenance Schedule
+
+### Weekly Tasks
+- Review failed workflows
+- Update dependencies
+- Check security alerts
+- Monitor marketplace metrics
+
+### Monthly Tasks
+- Review and update workflow configurations
+- Audit permissions and secrets
+- Update documentation
+- Performance optimization review
+
+### Quarterly Tasks
+- Major dependency updates
+- Workflow architecture review
+- Security audit
+- Backup and disaster recovery testing
+
+## Additional Resources
+
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [VS Code Extension Publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
+- [Semantic Versioning](https://semver.org/)
+- [Changesets Documentation](https://github.com/changesets/changesets)
+
+For specific workflow details, see individual workflow files in `.github/workflows/`.

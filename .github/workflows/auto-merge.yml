@@ -3,42 +3,162 @@ name: Auto-merge Dependabot PRs
 on:
   pull_request:
     types: [opened, ready_for_review]
-    branches: [main]
+    branches: [main, dev]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: read
 
 jobs:
-  auto-merge:
+  validate-dependabot-pr:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      should-merge: ${{ steps.validation.outputs.should-merge }}
+      update-type: ${{ steps.validation.outputs.update-type }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Dependabot PR
+        id: validation
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+            
+            console.log(`Validating Dependabot PR: ${pr.title}`);
+            
+            // Check if it's a security update or patch/minor update
+            const title = pr.title.toLowerCase();
+            const body = pr.body || '';
+            
+            // Determine update type
+            let updateType = 'unknown';
+            let shouldMerge = false;
+            
+            if (title.includes('security') || body.includes('security')) {
+              updateType = 'security';
+              shouldMerge = true;
+              console.log('✅ Security update detected - will auto-merge');
+            } else if (title.includes('patch') || title.match(/bump.*from.*\d+\.\d+\.\d+.*to.*\d+\.\d+\.\d+/)) {
+              updateType = 'patch';
+              shouldMerge = true;
+              console.log('✅ Patch update detected - will auto-merge');
+            } else if (title.includes('minor')) {
+              updateType = 'minor';
+              shouldMerge = true;
+              console.log('✅ Minor update detected - will auto-merge');
+            } else if (title.includes('major')) {
+              updateType = 'major';
+              shouldMerge = false;
+              console.log('⚠️ Major update detected - requires manual review');
+            }
+            
+            // Check if all required checks are passing
+            const { data: checks } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head.sha
+            });
+            
+            const failedChecks = checks.check_runs.filter(check => 
+              check.status === 'completed' && check.conclusion !== 'success'
+            );
+            
+            if (failedChecks.length > 0) {
+              shouldMerge = false;
+              console.log(`❌ Failed checks detected: ${failedChecks.map(c => c.name).join(', ')}`);
+            }
+            
+            core.setOutput('should-merge', shouldMerge);
+            core.setOutput('update-type', updateType);
+            
+            return { shouldMerge, updateType };
+
+  auto-merge:
+    needs: validate-dependabot-pr
+    if: needs.validate-dependabot-pr.outputs.should-merge == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
       pull-requests: write
+    
     steps:
-      - name: Enable auto-merge
+      - name: Wait for checks to complete
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const maxWaitTime = 5 * 60 * 1000; // 5 minutes
+            const checkInterval = 30 * 1000; // 30 seconds
+            const startTime = Date.now();
+            
+            while (Date.now() - startTime < maxWaitTime) {
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number
+              });
+              
+              if (pr.mergeable_state === 'clean') {
+                console.log('✅ PR is ready to merge');
+                break;
+              }
+              
+              console.log(`⏳ Waiting for checks... Current state: ${pr.mergeable_state}`);
+              await new Promise(resolve => setTimeout(resolve, checkInterval));
+            }
+
+      - name: Auto-merge Dependabot PR
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             try {
+              console.log(`🤖 Auto-merging ${needs.validate-dependabot-pr.outputs.update-type} update...`);
+              
               const response = await github.rest.pulls.merge({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: context.payload.pull_request.number,
-                merge_method: 'squash'
+                merge_method: 'squash',
+                commit_title: `${context.payload.pull_request.title} (auto-merged)`,
+                commit_message: `Auto-merged ${needs.validate-dependabot-pr.outputs.update-type} update from Dependabot`
               });
               
               if (response.data.merged) {
                 console.log('✅ Pull request merged successfully');
+                
+                // Add a comment to the PR
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: `🤖 Auto-merged ${needs.validate-dependabot-pr.outputs.update-type} update after validation checks passed.`
+                });
               } else {
                 console.log('⚠️ Pull request was not merged, but no error occurred');
               }
             } catch (error) {
-              // Handle common errors gracefully
-              if (error.status === 405) {
-                console.log('⚠️ Pull request cannot be merged (may not be mergeable)');
-              } else if (error.status === 409) {
-                console.log('⚠️ Pull request has conflicts that need to be resolved');
-              } else {
-                console.error('❌ Failed to merge pull request:', error.message);
-                throw error;
-              }
+              console.error('❌ Failed to merge pull request:', error.message);
+              
+              // Add a comment explaining the failure
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: `❌ Auto-merge failed: ${error.message}\n\nPlease merge manually after reviewing.`
+              });
+              
+              throw error;
             }

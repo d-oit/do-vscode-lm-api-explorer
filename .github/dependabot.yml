@@ -4,23 +4,65 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
     target-branch: "dev"
+    open-pull-requests-limit: 5
     allow:
       - dependency-type: "all"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: "npm"
+      prefix-development: "npm-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+    reviewers:
+      - "d-oit"
+    assignees:
+      - "d-oit"
 
   - package-ecosystem: "github-actions"
     directory: "/.github/workflows"
     schedule:
       interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "UTC"
     target-branch: "dev"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "actions"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    reviewers:
+      - "d-oit"
+    assignees:
+      - "d-oit"
 
-  - package-ecosystem: "docker"
+  # Security updates target main branch for immediate attention
+  - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
-    target-branch: "dev"
-
-# Security updates will now also target main branch
+      interval: "daily"
+    target-branch: "main"
+    open-pull-requests-limit: 10
+    allow:
+      - dependency-type: "security"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    labels:
+      - "security"
+      - "dependencies"
+      - "priority-high"
+    reviewers:
+      - "d-oit"
+    assignees:
+      - "d-oit"
