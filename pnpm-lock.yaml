@@ -21,7 +21,7 @@ importers:
         specifier: ^8.34.0
         version: 8.35.1(@typescript-eslint/parser@8.35.1(eslint@9.30.0)(typescript@5.8.3))(eslint@9.30.0)(typescript@5.8.3)
       '@typescript-eslint/parser':
-        specifier: ^8.34.0
+        specifier: ^8.35.1
         version: 8.35.1(eslint@9.30.0)(typescript@5.8.3)
       '@vscode/test-cli':
         specifier: ^0.0.11
