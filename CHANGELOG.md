@@ -3,6 +3,15 @@
 All notable changes to the "do-vscode-lm-explorer" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## [0.8.8] - 2025-07-02
+
+### Fixed
+- Replace softprops/action-gh-release with GitHub CLI for more reliable release creation
+- Add automatic patch release support for commits without changesets
+- Improve release decision logic and error handling
+- Add support for manual release triggers with version type selection
+- Enhance workflow conditions and resource utilization
+
 ## [0.8.6] - 2025-07-01
 
 ## [0.8.5] - 2025-06-17
