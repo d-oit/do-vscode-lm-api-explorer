@@ -14,7 +14,7 @@ We actively support the following versions with security updates:
 We take security vulnerabilities seriously. If you discover a security vulnerability, please follow these steps:
 
 ### For Public Issues
-- Open an issue in our [GitHub Issues](../../issues)
+- Open an issue in our [GitHub Issues](../../../issues)
 - Use the "Security" label
 - Provide detailed information about the vulnerability
 
