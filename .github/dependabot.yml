@@ -1,4 +1,5 @@
 version: 2
+
 updates:
   - package-ecosystem: "npm"
     directory: "/"
@@ -21,10 +22,8 @@ updates:
     labels:
       - "dependencies"
       - "npm"
-    reviewers:
-      - "d-oit"
     assignees:
-      - "d-oit"
+      - "d-oit" # This can still be used
 
   - package-ecosystem: "github-actions"
     directory: "/.github/workflows"
@@ -41,20 +40,15 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
-    reviewers:
-      - "d-oit"
     assignees:
       - "d-oit"
 
-  # Security updates target main branch for immediate attention
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "daily"
     target-branch: "main"
     open-pull-requests-limit: 10
-    # 'security' is not a valid dependency-type. Use 'all' to allow all updates.
-    # To focus on security updates, rely on GitHub's security alerts and PRs.
     allow:
       - dependency-type: "all"
     commit-message:
@@ -64,7 +58,5 @@ updates:
       - "security"
       - "dependencies"
       - "priority-high"
-    reviewers:
-      - "d-oit"
     assignees:
       - "d-oit"
