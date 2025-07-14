@@ -1,548 +1,82 @@
-name: Unified Release Workflow
+name: Release
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: 'Version bump type (for manual changeset processing)'
-        required: false
-        default: 'auto'
-        type: choice
-        options:
-          - auto
-          - patch
-          - minor
-          - major
-      skip_tests_before_versioning:
-        description: 'Skip tests before versioning (not recommended)'
-        required: false
-        default: false
-        type: boolean
-      force_publish:
-        description: 'Force publish to marketplace even if tests fail'
-        required: false
-        default: false
-        type: boolean
-
-permissions:
-  contents: write
-  pull-requests: read
-  actions: read
-  security-events: write
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  version_and_tag:
+  release:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    outputs:
-      version_changed: ${{ steps.version-check.outputs.version-changed }}
-      new_version: ${{ steps.changeset-process.outputs.new-version }}
-      new_tag_name: ${{ steps.commit-and-tag.outputs.tag-created }}
-      has_changesets: ${{ steps.check-changesets.outputs.has-changesets }}
-      should_process_changesets: ${{ steps.should-process.outputs.should-process-changesets }}
-      should_create_release: ${{ steps.should-process.outputs.should-create-release }}
+    if: github.ref == 'refs/heads/main'
+    
     steps:
-      - name: Checkout code (for versioning)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check for changeset files
-        id: check-changesets
-        run: |
-          if [ -d ".changeset" ] && [ "$(find .changeset -name "*.md" -not -name "README.md" | wc -l)" -gt 0 ]; then
-            echo "has-changesets=true" >> $GITHUB_OUTPUT
-          else
-            echo "has-changesets=false" >> $GITHUB_OUTPUT
-          fi
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
 
-      - name: Check for commits since last release
-        id: check-commits
-        run: |
-          # Get the latest tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No previous tags found, will create release"
-            echo "has-new-commits=true" >> $GITHUB_OUTPUT
-            echo "commits-since-release=999" >> $GITHUB_OUTPUT
-          else
-            # Count commits since the latest tag
-            COMMITS_SINCE=$(git rev-list --count "$LATEST_TAG"..HEAD 2>/dev/null || echo "0")
-            echo "commits-since-release=$COMMITS_SINCE" >> $GITHUB_OUTPUT
-            
-            if [ "$COMMITS_SINCE" -gt 0 ]; then
-              echo "has-new-commits=true" >> $GITHUB_OUTPUT
-              echo "Found $COMMITS_SINCE commits since last release ($LATEST_TAG)"
-            else
-              echo "has-new-commits=false" >> $GITHUB_OUTPUT
-              echo "No commits since last release ($LATEST_TAG)"
-            fi
-          fi
+    - name: Install dependencies
+      run: npm ci
 
-      - name: Determine if release should be created
-        id: should-process
-        run: |
-          SHOULD_PROCESS_CHANGESETS=false
-          SHOULD_CREATE_RELEASE=false
-          
-          # Always process if manually triggered
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            SHOULD_PROCESS_CHANGESETS=true
-            SHOULD_CREATE_RELEASE=true
-            echo "Manual trigger: will create release"
-          # Process if there are changesets
-          elif [ "${{ steps.check-changesets.outputs.has-changesets }}" = "true" ]; then
-            SHOULD_PROCESS_CHANGESETS=true
-            SHOULD_CREATE_RELEASE=true
-            echo "Changesets found: will create release"
-          # Create release if there are new commits since last release (auto-patch) and it's a push to main
-          elif [ "${{ steps.check-commits.outputs.has-new-commits }}" = "true" ] && [ "${{ github.event_name }}" = "push" ]; then
-            SHOULD_PROCESS_CHANGESETS=false
-            SHOULD_CREATE_RELEASE=true
-            echo "New commits found on push to main: will create patch release"
-          fi
-          
-          echo "should-process-changesets=$SHOULD_PROCESS_CHANGESETS" >> $GITHUB_OUTPUT
-          echo "should-create-release=$SHOULD_CREATE_RELEASE" >> $GITHUB_OUTPUT
+    - name: Run tests
+      run: npm test
 
-      - name: Setup Node.js (for versioning)
-        if: steps.should-process.outputs.should-create-release == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
+    - name: Build
+      run: npm run build
 
-      - name: Install dependencies (for versioning)
-        if: steps.should-process.outputs.should-create-release == 'true'
-        run: npm ci
+    - name: Configure Git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Configure Git
-        if: steps.should-process.outputs.should-create-release == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action (Versioning)"
+    - name: Bump version and create tag
+      id: version
+      run: |
+        # Get current version
+        CURRENT_VERSION=$(node -p "require('./package.json').version")
+        echo "Current version: $CURRENT_VERSION"
+        
+        # Bump patch version
+        npm version patch --no-git-tag-version
+        
+        # Get new version
+        NEW_VERSION=$(node -p "require('./package.json').version")
+        echo "New version: $NEW_VERSION"
+        
+        # Create and push tag
+        git add package.json package-lock.json
+        git commit -m "chore: bump version to $NEW_VERSION"
+        git tag "v$NEW_VERSION"
+        git push origin main
+        git push origin "v$NEW_VERSION"
+        
+        # Set output
+        echo "new_tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Install xvfb for tests
-        if: steps.should-process.outputs.should-process-changesets == 'true' && inputs.skip_tests_before_versioning != true && github.event_name == 'workflow_dispatch'
-        run: sudo apt-get update && sudo apt-get install -y xvfb
+    - name: Create Release
+      run: |
+        gh release create ${{ steps.version.outputs.new_tag }} \
+          --title "Release ${{ steps.version.outputs.new_tag }}" \
+          --generate-notes
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run tests before versioning (optional)
-        if: steps.should-process.outputs.should-process-changesets == 'true' && inputs.skip_tests_before_versioning != true && github.event_name == 'workflow_dispatch'
-        timeout-minutes: 10
-        run: xvfb-run --auto-servernum npm test
+    - name: Package extension
+      run: |
+        npx vsce package
 
-      - name: Process changesets and update version/changelog
-        if: steps.should-process.outputs.should-create-release == 'true'
-        id: changeset-process
-        env:
-          MANUAL_VERSION_TYPE: ${{ inputs.version_type }}
-        run: |
-          set -e
-          
-          # If we have changesets, process them normally
-          if [ "${{ steps.should-process.outputs.should-process-changesets }}" = "true" ]; then
-            VERSION_TYPE_TO_USE="$MANUAL_VERSION_TYPE"
-            if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "$MANUAL_VERSION_TYPE" = "auto" ]; then
-              npm run changeset:full-release-auto
-            else
-              bash ./scripts/changelog-manager.sh -c full-release -t "$VERSION_TYPE_TO_USE"
-            fi
-          else
-            # No changesets, but we want to create a patch release
-            echo "No changesets found, creating automatic patch release..."
-            
-            # Get current version and increment patch
-            CURRENT_VERSION=$(node -p "require('./package.json').version")
-            echo "Current version: $CURRENT_VERSION"
-            
-            # Determine version type - default to patch for auto-releases
-            VERSION_TYPE_TO_USE="${MANUAL_VERSION_TYPE:-patch}"
-            if [ "$VERSION_TYPE_TO_USE" = "auto" ]; then
-              VERSION_TYPE_TO_USE="patch"
-            fi
-            
-            # Calculate new version
-            IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
-            MAJOR=${VERSION_PARTS[0]}
-            MINOR=${VERSION_PARTS[1]}
-            PATCH=${VERSION_PARTS[2]}
-            
-            case "$VERSION_TYPE_TO_USE" in
-              "major")
-                if [ "$MAJOR" -eq 0 ]; then
-                  MINOR=$((MINOR + 1))
-                  PATCH=0
-                else
-                  MAJOR=$((MAJOR + 1))
-                  MINOR=0
-                  PATCH=0
-                fi
-                ;;
-              "minor")
-                if [ "$MAJOR" -eq 0 ]; then
-                  MINOR=$((MINOR + 1))
-                  PATCH=0
-                else
-                  MINOR=$((MINOR + 1))
-                  PATCH=0
-                fi
-                ;;
-              *)
-                PATCH=$((PATCH + 1))
-                ;;
-            esac
-            
-            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-            echo "New version: $NEW_VERSION"
-            
-            # Update package.json
-            node -e "
-              const fs = require('fs');
-              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-              pkg.version = '$NEW_VERSION';
-              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-            "
-            
-            # Update changelog with auto-generated entry
-            CURRENT_DATE=$(date +"%Y-%m-%d")
-            CHANGELOG_ENTRY="\n## [$NEW_VERSION] - $CURRENT_DATE\n\n### Changed\n\n- Automatic patch release with latest changes\n"
-            
-            # Insert into changelog
-            if [ -f "CHANGELOG.md" ]; then
-              # Find the first version entry and insert before it
-              TEMP_FILE=$(mktemp)
-              awk -v entry="$CHANGELOG_ENTRY" '
-                /^## \[/ && !inserted { print entry; inserted=1 }
-                { print }
-              ' CHANGELOG.md > "$TEMP_FILE"
-              mv "$TEMP_FILE" CHANGELOG.md
-            else
-              echo -e "# Changelog\n$CHANGELOG_ENTRY" > CHANGELOG.md
-            fi
-            
-            echo "Updated package.json and CHANGELOG.md"
-          fi
-          
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Check if version/changelog changed
-        if: steps.should-process.outputs.should-create-release == 'true'
-        id: version-check
-        run: |
-          if git diff --quiet && git diff --staged --quiet; then
-            echo "version-changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "version-changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit version and changelog changes, and create tag
-        if: steps.version-check.outputs.version-changed == 'true'
-        id: commit-and-tag
-        run: |
-          set -e
-          NEW_VERSION="${{ steps.changeset-process.outputs.new-version }}"
-          TAG_NAME="v$NEW_VERSION"
-          
-          # Validate version format
-          if ! echo "$NEW_VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$'; then
-            echo "Error: Invalid version format: $NEW_VERSION"
-            exit 1
-          fi
-          
-          git add -A
-          git commit -m "chore: release $TAG_NAME [skip ci]"
-          git tag "$TAG_NAME"
-          
-          # Push with retry logic and better error handling
-          for i in 1 2 3; do
-            echo "Attempt $i: Pushing changes and tag..."
-            if git push origin main && git push origin "$TAG_NAME"; then
-              echo "Successfully pushed changes and tag"
-              break
-            else
-              if [ $i -eq 3 ]; then
-                echo "Failed to push after 3 attempts"
-                exit 1
-              fi
-              echo "Push failed, retrying in 5 seconds..."
-              sleep 5
-            fi
-          done
-          
-          echo "tag-created=$TAG_NAME" >> $GITHUB_OUTPUT
-
-  build_and_publish:
-    needs: version_and_tag
-    if: needs.version_and_tag.outputs.version_changed == 'true' && needs.version_and_tag.outputs.should_create_release == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout code at new tag
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.version_and_tag.outputs.new_tag_name }}
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Security audit
-        run: |
-          echo "Running security audit..."
-          npm audit --audit-level moderate || {
-            echo "::warning::Security vulnerabilities found. Review before publishing."
-            npm audit --audit-level moderate --json > audit-results.json || true
-          }
-
-      - name: Install xvfb
-        run: sudo apt-get update && sudo apt-get install -y xvfb
-
-      - name: Run linting
-        run: npm run lint
-
-      - name: Type checking
-        run: npm run check-types
-
-      - name: Run tests (on tagged commit)
-        timeout-minutes: 15
-        run: xvfb-run --auto-servernum npm test
-
-      - name: Install VSCE
-        run: npm install -g vsce
-
-      - name: Ensure release directory exists
-        run: mkdir -p release/
-
-      - name: Build VSIX package
-        id: build-vsix
-        timeout-minutes: 10
-        run: |
-          set -e
-          
-          # Build the package
-          vsce package --out release/
-          
-          # Find and validate the VSIX file
-          VSIX_FILE=$(find release/ -name "*.vsix" | head -n 1)
-          
-          if [ -z "$VSIX_FILE" ]; then
-            echo "Error: No VSIX file found after packaging"
-            exit 1
-          fi
-          
-          if [ ! -f "$VSIX_FILE" ]; then
-            echo "Error: VSIX file does not exist: $VSIX_FILE"
-            exit 1
-          fi
-          
-          # Validate VSIX file size (should be > 1KB)
-          FILE_SIZE=$(stat -c%s "$VSIX_FILE")
-          if [ "$FILE_SIZE" -lt 1024 ]; then
-            echo "Error: VSIX file is too small ($FILE_SIZE bytes), likely corrupted"
-            exit 1
-          fi
-          
-          echo "Successfully created VSIX package: $VSIX_FILE ($(du -h "$VSIX_FILE" | cut -f1))"
-          echo "vsix_file_path=$VSIX_FILE" >> $GITHUB_OUTPUT
-          echo "vsix_file_name=$(basename "$VSIX_FILE")" >> $GITHUB_OUTPUT
-
-      - name: Extract changelog content for release
-        id: extract-changelog
-        run: |
-          VERSION="${{ needs.version_and_tag.outputs.new_version }}"
-          
-          # Extract the changelog content for the current version
-          if [ -f "CHANGELOG.md" ]; then
-            # Find the start of the current version section
-            START_LINE=$(grep -n "^## \[$VERSION\]" CHANGELOG.md | cut -d: -f1)
-            
-            if [ -n "$START_LINE" ]; then
-              # Find the start of the next version section (or end of file)
-              NEXT_VERSION_LINE=$(tail -n +$((START_LINE + 1)) CHANGELOG.md | grep -n "^## \[" | head -1 | cut -d: -f1)
-              
-              if [ -n "$NEXT_VERSION_LINE" ]; then
-                # Calculate the actual line number in the file
-                END_LINE=$((START_LINE + NEXT_VERSION_LINE - 1))
-                CHANGELOG_CONTENT=$(sed -n "${START_LINE},${END_LINE}p" CHANGELOG.md | head -n -1)
-              else
-                # No next version found, extract to end of file
-                CHANGELOG_CONTENT=$(tail -n +$START_LINE CHANGELOG.md)
-              fi
-              
-              # Remove the version header line and clean up
-              CHANGELOG_CONTENT=$(echo "$CHANGELOG_CONTENT" | tail -n +2 | sed '/^$/d' | head -c 65000)
-              
-              # If changelog content is empty or very short, provide a default message
-              if [ -z "$CHANGELOG_CONTENT" ] || [ ${#CHANGELOG_CONTENT} -lt 10 ]; then
-                CHANGELOG_CONTENT="Release $VERSION
-
-          This release includes various improvements and updates. See the full changelog for details."
-              fi
-            else
-              CHANGELOG_CONTENT="Release $VERSION
-
-          This release includes various improvements and updates. See the full changelog for details."
-            fi
-          else
-            CHANGELOG_CONTENT="Release $VERSION
-
-          This release includes various improvements and updates."
-          fi
-          
-          # Save to file to handle multiline content properly
-          echo "$CHANGELOG_CONTENT" > /tmp/release_body.md
-          echo "release_body_file=/tmp/release_body.md" >> $GITHUB_OUTPUT
-          
-          # Also output a truncated version for debugging
-          echo "Release body preview:"
-          echo "$CHANGELOG_CONTENT" | head -10
-
-      - name: Upload VSIX as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: vsix-package-${{ needs.version_and_tag.outputs.new_version }}
-          path: ${{ steps.build-vsix.outputs.vsix_file_path }}
-          retention-days: 30
-
-      - name: Install GitHub CLI
-        run: |
-          # GitHub CLI is usually pre-installed on GitHub runners, but let's ensure it's available
-          if ! command -v gh &> /dev/null; then
-            echo "Installing GitHub CLI..."
-            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-            sudo apt update
-            sudo apt install gh
-          else
-            echo "GitHub CLI is already installed"
-            gh --version
-          fi
-
-      - name: Create GitHub Release with gh CLI
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
-          
-          VERSION="${{ needs.version_and_tag.outputs.new_version }}"
-          TAG_NAME="${{ needs.version_and_tag.outputs.new_tag_name }}"
-          VSIX_FILE="${{ steps.build-vsix.outputs.vsix_file_path }}"
-          RELEASE_BODY_FILE="${{ steps.extract-changelog.outputs.release_body_file }}"
-          
-          echo "Creating GitHub release for $TAG_NAME..."
-          
-          # Check if release already exists
-          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Release $TAG_NAME already exists, updating it..."
-            
-            # Delete existing release to recreate it
-            gh release delete "$TAG_NAME" --yes || true
-            
-            # Wait a moment for the deletion to propagate
-            sleep 2
-          fi
-          
-          # Determine if this is a prerelease
-          PRERELEASE_FLAG=""
-          if echo "$VERSION" | grep -q "-"; then
-            PRERELEASE_FLAG="--prerelease"
-            echo "Detected prerelease version"
-          fi
-          
-          # Create the release using gh CLI
-          if [ -f "$RELEASE_BODY_FILE" ]; then
-            gh release create "$TAG_NAME" \
-              --title "Release $VERSION" \
-              --notes-file "$RELEASE_BODY_FILE" \
-              $PRERELEASE_FLAG \
-              "$VSIX_FILE"
-          else
-            # Fallback if no release body file
-            gh release create "$TAG_NAME" \
-              --title "Release $VERSION" \
-              --notes "Release $VERSION - See CHANGELOG.md for details" \
-              $PRERELEASE_FLAG \
-              "$VSIX_FILE"
-          fi
-          
-          echo "Successfully created GitHub release: $TAG_NAME"
-          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
-
-      - name: Check VSCE_PAT availability
-        id: check_vsce_pat
-        run: |
-          if [ -n "${{ secrets.VSCE_PAT }}" ]; then
-            echo "is_set=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_set=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Validate VSIX before publishing
-        if: steps.check_vsce_pat.outputs.is_set == 'true'
-        run: |
-          set -e
-          echo "Validating VSIX package before publishing..."
-          
-          # Check if file exists and is readable
-          if [ ! -f "${{ steps.build-vsix.outputs.vsix_file_path }}" ]; then
-            echo "Error: VSIX file not found: ${{ steps.build-vsix.outputs.vsix_file_path }}"
-            exit 1
-          fi
-          
-          # Basic file validation
-          file_type=$(file "${{ steps.build-vsix.outputs.vsix_file_path }}")
-          echo "File type: $file_type"
-          
-          if ! echo "$file_type" | grep -i "zip\|archive"; then
-            echo "Warning: VSIX file may not be a valid archive"
-          fi
-          
-          # Check file size
-          file_size=$(stat -c%s "${{ steps.build-vsix.outputs.vsix_file_path }}")
-          echo "VSIX file size: $file_size bytes"
-          
-          if [ "$file_size" -lt 10240 ]; then  # Less than 10KB
-            echo "Error: VSIX file is suspiciously small ($file_size bytes)"
-            exit 1
-          fi
-
-      - name: Publish to VS Code Marketplace
-        if: steps.check_vsce_pat.outputs.is_set == 'true'
-        timeout-minutes: 10
-        run: |
-          set -e
-          echo "Publishing to VS Code Marketplace..."
-          
-          # Publish with explicit package path and better error handling
-          if ! vsce publish -p "${{ secrets.VSCE_PAT }}" --packagePath "${{ steps.build-vsix.outputs.vsix_file_path }}"; then
-            echo "Error: Failed to publish to VS Code Marketplace"
-            echo "This could be due to:"
-            echo "1. Invalid or expired VSCE_PAT token"
-            echo "2. Network connectivity issues"
-            echo "3. Marketplace validation failures"
-            echo "4. Version already exists"
-            exit 1
-          fi
-          
-          echo "Successfully published to VS Code Marketplace!"
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-
-      - name: Publish failure notification
-        if: failure() && steps.check_vsce_pat.outputs.is_set == 'true'
-        run: |
-          echo "::error::Failed to publish to VS Code Marketplace"
-          echo "::notice::The GitHub release was created successfully, but marketplace publishing failed"
-          echo "::notice::You can manually publish using: vsce publish --packagePath ${{ steps.build-vsix.outputs.vsix_file_path }}"
+    - name: Upload VSIX to release
+      run: |
+        gh release upload ${{ steps.version.outputs.new_tag }} *.vsix
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
